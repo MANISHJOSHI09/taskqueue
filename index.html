@@ -1,0 +1,67 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Team Task Queue</title>
+<style>
+:root{--bg:#f6f7f9;--c:#fff;--t:#1b1f24;--m:#667085;--b:#e3e6ea;--p:#2563eb;--r:#dc2626;--g:#16a34a;--o:#d97706;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#101318;--c:#1a1f27;--t:#eceff3;--m:#9aa4b2;--b:#2b323c;--p:#60a5fa;--r:#f87171;--g:#4ade80;--o:#fbbf24;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.w{max-width:1000px;margin:0 auto;padding:12px}h2{font-size:14px;margin:20px 0 8px;color:var(--m);text-transform:uppercase;letter-spacing:.5px}
+.top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.c{background:var(--c);border:1px solid var(--b);border-radius:12px;padding:12px;margin-bottom:8px}.c.tap{cursor:pointer}
+.rw{border:1px solid var(--b);border-left:4px solid var(--b);border-radius:10px;padding:8px;margin:8px 0;background:var(--c)}.rw.urgent{border-left-color:var(--r)}.rw.low{border-left-color:var(--g)}
+button,select,input,textarea{font:inherit;color:var(--t);background:var(--c);border:1px solid var(--b);border-radius:8px;padding:6px 10px}button{cursor:pointer}button.p{background:var(--p);color:#fff;border-color:var(--p)}button.r{color:var(--r)}
+.bd{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--b);color:var(--m)}.bd.urgent,.late{color:var(--r);font-weight:600}.bd.running,.bd.low{color:var(--g)}.bd.paused,.bd.new{color:var(--o)}
+.tm{font:600 15px ui-monospace,Menlo,monospace;display:flex;gap:12px;margin-top:4px}.s{font-size:12px;color:var(--m)}.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}form .f{grid-column:1/-1}input,textarea{width:100%}
+#ts{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--t);color:var(--bg);padding:8px 14px;border-radius:99px;display:none;z-index:10;max-width:90%}
+</style></head><body><div class="w" id="app"></div><div id="ts"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL='https://kgswcptimmeslnosbhnb.supabase.co',SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnc3djcHRpbW1lc2xub3NiaG5iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MDI4ODMsImV4cCI6MjEwODQ3ODg4M30.wXO8revHdkBfnCJzwt_dNymaeMaG0-3I5vH4W6qNGe0'; // the anon key is meant to be public; never paste a service_role key
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=s=>document.querySelector(s),now=()=>Date.now(),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fm=ms=>{const m=Math.round(ms/60000);return m>=60?Math.floor(m/60)+'h '+m%60+'m':m+'m'},fc=ms=>{const n=ms<0,s=Math.floor(Math.abs(ms)/1000);return(n?'-':'')+String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+let me,P=new Map(),TK=[],LG=[],CM=[],AU=[],NT=[],open=new Set(),dirty=false,sub=false;
+const nm=u=>P.get(u)?.name||'?',isA=()=>me&&me.role==='admin';
+function login(){$('#app').innerHTML=`<div class="c" style="max-width:340px;margin:40px auto"><b style="font-size:18px">Team Task Queue</b><div class="row"><input id="li" placeholder="Username (e.g. taniya)" autocapitalize="none"><input id="lp" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"><button class="p" onclick="doLogin()">Log in</button></div></div>`}
+async function doLogin(){const{error}=await sb.auth.signInWithPassword({email:$('#li').value.trim().toLowerCase()+'@team.app',password:$('#lp').value});if(error)return toast('Wrong username or password');boot()}
+async function logout(){await sb.auth.signOut();me=null;login()}
+async function boot(){const{data:{session}}=await sb.auth.getSession();if(!session)return login();
+const{data:p}=await sb.from('profiles').select('*').eq('id',session.user.id).single();if(!p||!p.active){await sb.auth.signOut();toast('Account inactive');return login()}
+me=p;await load();if(!sub){sub=true;sb.channel('x').on('postgres_changes',{event:'*',schema:'public'},e=>{if(e.table==='notes'&&e.new&&e.new.user_id===me.id)alertMe(e.new.body);load()}).subscribe();setInterval(rt,1000);
+addEventListener('online',()=>{load()});addEventListener('offline',paint);document.addEventListener('focusout',()=>{if(dirty)setTimeout(()=>{if(dirty)paint()},300)})}}
+async function load(){if(!navigator.onLine){paint();return}
+const q=(t,o)=>sb.from(t).select('*').order(o,{ascending:t==='tasks'||t==='notes'?false:true});
+const[a,b,c,d,e,f]=await Promise.all([q('profiles','name'),q('tasks','created_at'),q('work_log','id'),q('comments','id'),q('audit','id'),q('notes','id')]);
+if(b.error){toast(b.error.message);return}P=new Map(a.data.map(x=>[x.id,x]));TK=b.data;LG=c.data;CM=d.data;AU=e.data;NT=f.data.slice(0,8);paint()}
+function alertMe(b){toast(b);try{if(Notification.permission==='granted')new Notification('Team Task Queue',{body:b})}catch(e){}if(navigator.vibrate)navigator.vibrate([200,100,200])}
+async function rpc(n,a){if(!navigator.onLine)return toast('You are offline. Changes cannot be saved yet.');const{error}=await sb.rpc(n,a);if(error)toast(error.message);else await load()}
+function wk(t){const per={};let tot=0;LG.filter(l=>l.task_id===t.id).forEach(l=>{const d=(l.ended_at?Date.parse(l.ended_at):now())-Date.parse(l.started_at);per[l.user_id]=(per[l.user_id]||0)+d;tot+=d});return{per,tot}}
+function card(t){const a=isA(),op=a||t.assignee===me.id,{per,tot}=wk(t),dn=t.status==='completed',ed=dn?a:(a||t.creator===me.id||t.assignee===me.id),o=open.has(t.id);
+return`<div class="rw ${t.priority}"><div><b>${esc(t.title)}</b> <span class="bd ${t.priority}">${t.priority}</span> <span class="bd ${t.status}">${t.status}</span>${!t.acked&&!dn?' <span class="bd new">not started</span>':''}</div>
+<div class="s">${esc(nm(t.creator))} → ${esc(nm(t.assignee))} · ${new Date(t.created_at).toLocaleString()}</div>${t.descr?`<div>${esc(t.descr)}</div>`:''}
+<div class="tm"><span data-t="${t.id}" data-k="tot"></span>${t.limit_min&&!dn?`<span data-t="${t.id}" data-k="left"></span>`:''}</div>
+<div class="s">${t.limit_min?'Limit '+t.limit_min+'m · ':'No limit · '}${Object.entries(per).map(([u,v])=>esc(nm(u))+' '+fm(v)).join(' · ')||'no work yet'}</div>
+<div class="row">${op&&!dn&&t.status!=='running'?`<button class="p" onclick="rpc('start_task',{p_id:'${t.id}'})">${t.status==='paused'?'Resume':'Start'}</button>`:''}${op&&t.status==='running'?`<button onclick="rpc('pause_task',{p_id:'${t.id}'})">Pause</button>`:''}${op&&!dn?`<button onclick="rpc('complete_task',{p_id:'${t.id}'})">Complete</button>`:''}
+${op&&!dn?`<select onchange="if(this.value)rpc('reassign_task',{p_id:'${t.id}',p_to:this.value})"><option value="">Reassign…</option>${[...P.values()].filter(u=>u.active&&u.id!==t.assignee).map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select>`:''}
+${ed?`<button onclick="edit('${t.id}')">Edit</button>`:''}${a&&t.limit_min&&!dn?`<button onclick="rpc('extend_task',{p_id:'${t.id}'})">+5 min</button>`:''}${a?`<button class="r" onclick="del('${t.id}')">Delete</button>`:''}<button onclick="tog('${t.id}')">${o?'Hide':'Details'}</button></div>${o?det(t,op):''}</div>`}
+function det(t,op){return`<div class="s" style="margin-top:8px"><b>Comments</b></div>${CM.filter(c=>c.task_id===t.id).map(c=>`<div class="s">${new Date(c.created_at).toLocaleString()} · <b>${esc(nm(c.author))}</b>: ${esc(c.body)}</div>`).join('')||'<div class="s">None</div>'}
+${op?`<div class="row"><input id="cm${t.id}" placeholder="Add a comment"><button onclick="cmt('${t.id}')">Add</button></div>`:''}
+<div class="s" style="margin-top:8px"><b>History</b></div>${AU.filter(x=>x.task_id===t.id).map(x=>`<div class="s">${new Date(x.created_at).toLocaleString()} · ${esc(nm(x.actor))} ${esc(x.action)} ${esc(x.detail)}</div>`).join('')}`}
+const tog=id=>{open.has(id)?open.delete(id):open.add(id);paint(true)},cmt=async id=>{const i=$('#cm'+id);await rpc('add_comment',{p_id:id,p_body:i.value});dirty=false};
+function del(id){if(confirm('Permanently delete this task and all its details? This cannot be undone.'))rpc('delete_task',{p_id:id})}
+function edit(id){const t=TK.find(x=>x.id===id),ti=prompt('Title',t.title);if(ti===null)return;const d=prompt('Description',t.descr||'');if(d===null)return;const p=prompt('Priority: urgent / normal / low',t.priority);if(p===null)return;let m=null;if(p.trim().toLowerCase()!=='low'){m=+prompt('Time limit (minutes)',t.limit_min||'');if(!m)return toast('Time limit needed')}rpc('edit_task',{p_id:id,p_title:ti,p_descr:d,p_pri:p.trim().toLowerCase(),p_min:m})}
+async function add(e){e.preventDefault();const pri=$('#pr').value;await rpc('create_task',{p_title:$('#ti').value,p_descr:$('#de').value,p_to:$('#to').value,p_pri:pri,p_min:pri==='low'?null:+$('#mn').value||null});$('#fm').reset();return false}
+const ord={urgent:0,normal:1,low:2},srt=(x,y)=>(ord[x.priority]-ord[y.priority])||(x.status==='running'?-1:y.status==='running'?1:0)||Date.parse(x.created_at)-Date.parse(y.created_at);
+function paint(force){if(!me)return;const ae=document.activeElement;if(!force&&ae&&/INPUT|TEXTAREA/.test(ae.tagName)&&ae.id&&/^(cm|ti|de|mn)/.test(ae.id)&&$('#app').contains(ae)&&ae.value){dirty=true;return}dirty=false;
+const a=isA(),un=TK.filter(t=>t.status!=='completed'),dn=TK.filter(t=>t.status==='completed'),act=[...P.values()].filter(u=>u.active);
+const blk=(k,title,sub,list)=>`<div class="c ${list.length?'tap':''}" ${list.length?`onclick="tog('${k}')"`:''}><b>${esc(title)}</b> <span class="s">${sub}</span></div>${open.has(k)&&list.length?list.map(card).join(''):''}`;
+$('#app').innerHTML=`<div class="top"><b style="font-size:18px">Team Task Queue</b><div class="s"><span style="color:${navigator.onLine?'var(--g)':'var(--r)'}">● ${navigator.onLine?'Online':'Offline'}</span> · ${esc(me.name)} (${a?'admin':'employee'}) <button onclick="Notification.requestPermission().then(p=>toast('Alerts: '+p))">Alerts</button> <button onclick="logout()">Log out</button></div></div>
+${NT.length?`<h2>Recent notifications</h2><div class="c">${NT.map(n=>`<div class="s">${new Date(n.created_at).toLocaleTimeString()} · ${esc(n.body)}</div>`).join('')}</div>`:''}
+<h2>New task</h2><div class="c"><form id="fm" onsubmit="return add(event)"><input id="ti" class="f" placeholder="Task title" required><textarea id="de" class="f" rows="2" placeholder="Description (optional)"></textarea>
+<select id="to">${act.map(u=>`<option value="${u.id}" ${u.id===me.id?'selected':''}>${esc(u.name)}</option>`).join('')}</select><select id="pr"><option value="normal">Normal</option><option value="urgent">Urgent</option><option value="low">Low (no limit)</option></select><input id="mn" type="number" min="1" placeholder="Time limit (min)"><button class="p">Add task</button></form></div>
+<h2>${a?'Team — unfinished tasks':'My unfinished tasks'}</h2>${a?`<div class="g">${act.map(u=>{const l=un.filter(t=>t.assignee===u.id).sort(srt),n=s=>l.filter(t=>t.status===s).length;return`<div>${blk('m'+u.id,u.name,`${l.length} unfinished · ${n('running')} running · ${n('paused')} paused · ${n('new')} new · ${l.filter(t=>!t.acked).length} unacknowledged`,l)}</div>`}).join('')}</div>`:
+`${un.filter(t=>t.assignee===me.id).sort(srt).map(card).join('')||'<div class="s">Nothing assigned to you.</div>'}<h2>Created by me, assigned to others</h2>${un.filter(t=>t.creator===me.id&&t.assignee!==me.id).sort(srt).map(card).join('')||'<div class="s">None</div>'}`}
+<h2>Completed report</h2><div class="g">${(a?act:[...new Set(dn.map(t=>t.assignee))].map(i=>P.get(i)).filter(Boolean)).map(u=>{const l=dn.filter(t=>t.assignee===u.id).sort((x,y)=>Date.parse(y.completed_at)-Date.parse(x.completed_at));return`<div>${blk('r'+u.id,u.name,l.length+' completed',l)}</div>`}).join('')||'<div class="s">No completed tasks yet.</div>'}</div>`;rt()}
+function rt(){document.querySelectorAll('[data-t]').forEach(e=>{const t=TK.find(x=>x.id===e.dataset.t);if(!t)return;const w=wk(t).tot;e.textContent=e.dataset.k==='tot'?'Worked '+fc(w):(t.limit_min*60000-w<0?'Over '+fc(w-t.limit_min*60000):'Left '+fc(t.limit_min*60000-w));if(e.dataset.k==='left'&&t.limit_min*60000-w<0)e.className='late'})}
+let tt;function toast(m){const e=$('#ts');e.textContent=m;e.style.display='block';clearTimeout(tt);tt=setTimeout(()=>e.style.display='none',4000)}
+if(SUPABASE_URL.startsWith('PASTE'))$('#app').innerHTML='<div class="c">Setup needed: open index.html and paste your Supabase URL and anon key at the top (see README).</div>';else boot();
+</script></body></html>

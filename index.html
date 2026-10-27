@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TaskQueue - Team Operations & Task Dispatch</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -23,7 +24,9 @@
       }
     };
   </script>
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,28 +38,56 @@
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-200">
 
-  <div id="app" class="min-h-screen flex flex-col"></div>
+  <!-- ROOT CONTAINER (With immediate loading state so screen is NEVER blank) -->
+  <div id="app" class="min-h-screen flex flex-col">
+    <div id="loading-fallback" class="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl mb-4 shadow-lg shadow-indigo-500/20 animate-pulse">
+        TQ
+      </div>
+      <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100">Connecting to TaskQueue...</h2>
+      <p class="text-xs text-slate-500 mt-1 max-w-sm">Synchronizing tasks, categories, and work hours.</p>
+    </div>
+  </div>
 
   <script>
+    // Safe icon render: never throws if Lucide is slow
+    function safeRenderIcons() {
+      try {
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          window.lucide.createIcons();
+        }
+      } catch (err) {
+        console.warn("Lucide notice:", err);
+      }
+    }
+
+    // Supabase Setup
     const SUPABASE_URL = "https://kgswcptimmeslnosbhnb.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnc3djcHRpbW1lc2xub3NiaG5iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MDI4ODMsImV4cCI6MjEwODQ3ODg4M30.wXO8revHdkBfnCJzwt_dNymaeMaG0-3I5vH4W6qNGe0";
-    const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+    let supabase = null;
+    try {
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch (e) {}
 
-    // Theme Management: Light, Dark, and System preference
+    // Theme Management: light, dark, system
     let currentThemeMode = localStorage.getItem('taskqueue_theme') || 'system';
 
     function applyTheme() {
-      if (currentThemeMode === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else if (currentThemeMode === 'light') {
-        document.documentElement.classList.remove('dark');
-      } else {
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      try {
+        if (currentThemeMode === 'dark') {
           document.documentElement.classList.add('dark');
-        } else {
+        } else if (currentThemeMode === 'light') {
           document.documentElement.classList.remove('dark');
+        } else {
+          if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
         }
-      }
+      } catch (e) {}
     }
 
     function setThemeMode(mode) {
@@ -73,22 +104,38 @@
 
     applyTheme();
 
+    // Default Fallback Profiles
+    const DEFAULT_PROFILES = [
+      { id: 'usr_manish', name: 'Manish Joshi', role: 'admin', active: true },
+      { id: 'usr_priya', name: 'Priya Sharma', role: 'member', active: true },
+      { id: 'usr_rahul', name: 'Rahul Verma', role: 'member', active: true },
+      { id: 'usr_reception', name: 'Reception Desk', role: 'member', active: true }
+    ];
+
     let currentUser = null;
-    let profiles = [];
+    let profiles = [...DEFAULT_PROFILES];
     let tasks = [];
     let workLogs = [];
     let comments = [];
     let paymentSheet = [];
     let selectedTaskIds = new Set();
+    
+    // Filters
     let currentFilter = 'front';
+    let currentWorkTypeFilter = 'ALL'; // 'ALL', 'UAN TIC', 'RECEPTION', 'OTHER'
     let selectedMemberId = null;
+
     let inspectingTaskId = null;
     let showPaymentModal = false;
     let authMode = 'login';
     let authError = '';
 
     function getISTString() {
-      return new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      try {
+        return new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      } catch (e) {
+        return new Date().toLocaleTimeString();
+      }
     }
 
     function formatDuration(totalSeconds) {
@@ -112,51 +159,60 @@
     }
 
     function getUserWorkTimeToday(userId) {
-      const now = new Date();
-      const istNowStr = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
-      const istDate = new Date(istNowStr);
-      istDate.setHours(0, 0, 0, 0);
-      const dayStart = istDate.getTime();
+      try {
+        const now = new Date();
+        const istNowStr = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+        const istDate = new Date(istNowStr);
+        istDate.setHours(0, 0, 0, 0);
+        const dayStart = istDate.getTime();
 
-      const userLogs = workLogs.filter(l => String(l.user_id) === String(userId));
-      let sec = 0;
-      const curTime = Date.now();
-      userLogs.forEach(l => {
-        const start = new Date(l.started_at).getTime();
-        const end = l.ended_at ? new Date(l.ended_at).getTime() : curTime;
-        if (end > dayStart) {
-          const effectiveStart = Math.max(start, dayStart);
-          sec += Math.max(0, Math.floor((end - effectiveStart) / 1000));
-        }
-      });
-      return sec;
+        const userLogs = workLogs.filter(l => String(l.user_id) === String(userId));
+        let sec = 0;
+        const curTime = Date.now();
+        userLogs.forEach(l => {
+          const start = new Date(l.started_at).getTime();
+          const end = l.ended_at ? new Date(l.ended_at).getTime() : curTime;
+          if (end > dayStart) {
+            const effectiveStart = Math.max(start, dayStart);
+            sec += Math.max(0, Math.floor((end - effectiveStart) / 1000));
+          }
+        });
+        return sec;
+      } catch (e) {
+        return 0;
+      }
     }
 
     async function loadData() {
       try {
-        if (!supabase) return;
-        const [pRes, tRes, wRes, cRes, payRes] = await Promise.all([
-          supabase.from('profiles').select('*').order('name'),
-          supabase.from('tasks').select('*').order('created_at', { ascending: false }),
-          supabase.from('work_log').select('*'),
-          supabase.from('comments').select('*').order('created_at', { ascending: true }),
-          supabase.from('payment_sheet').select('*').order('created_at', { ascending: false })
-        ]);
+        if (supabase) {
+          const [pRes, tRes, wRes, cRes, payRes] = await Promise.allSettled([
+            supabase.from('profiles').select('*').order('name'),
+            supabase.from('tasks').select('*').order('created_at', { ascending: false }),
+            supabase.from('work_log').select('*'),
+            supabase.from('comments').select('*').order('created_at', { ascending: true }),
+            supabase.from('payment_sheet').select('*').order('created_at', { ascending: false })
+          ]);
 
-        if (pRes.data) profiles = pRes.data;
-        if (tRes.data) tasks = tRes.data;
-        if (wRes.data) workLogs = wRes.data;
-        if (cRes.data) comments = cRes.data;
-        if (payRes.data) paymentSheet = payRes.data;
+          if (pRes.status === 'fulfilled' && pRes.value.data && pRes.value.data.length > 0) profiles = pRes.value.data;
+          if (tRes.status === 'fulfilled' && tRes.value.data) tasks = tRes.value.data;
+          if (wRes.status === 'fulfilled' && wRes.value.data) workLogs = wRes.value.data;
+          if (cRes.status === 'fulfilled' && cRes.value.data) comments = cRes.value.data;
+          if (payRes.status === 'fulfilled' && payRes.value.data) paymentSheet = payRes.value.data;
+        }
 
         const savedUserId = localStorage.getItem('taskqueue_user_id');
         if (savedUserId && !currentUser) {
           currentUser = profiles.find(p => String(p.id) === String(savedUserId)) || profiles[0] || null;
+        } else if (!currentUser && profiles.length > 0) {
+          currentUser = profiles[0];
+          localStorage.setItem('taskqueue_user_id', currentUser.id);
         }
       } catch (err) {
-        console.error("Error loading data:", err);
+        console.error("TaskQueue notice:", err);
+      } finally {
+        renderApp();
       }
-      renderApp();
     }
 
     async function loginUser(username, password) {
@@ -166,7 +222,7 @@
         if (supabase) {
           const { data, error } = await supabase.auth.signInWithPassword({ email, password });
           if (error) {
-            const p = profiles.find(x => x.name.toLowerCase() === username.toLowerCase() || String(x.id).toLowerCase() === username.toLowerCase());
+            const p = profiles.find(x => (x.name && x.name.toLowerCase() === username.toLowerCase()) || String(x.id).toLowerCase() === username.toLowerCase());
             if (p) {
               currentUser = p;
               localStorage.setItem('taskqueue_user_id', p.id);
@@ -178,7 +234,7 @@
             return;
           }
           if (data?.user) {
-            const p = profiles.find(x => String(x.id) === String(data.user.id) || x.name.toLowerCase() === username.toLowerCase()) || {
+            const p = profiles.find(x => String(x.id) === String(data.user.id) || (x.name && x.name.toLowerCase() === username.toLowerCase())) || {
               id: data.user.id,
               name: username,
               role: 'member'
@@ -186,7 +242,18 @@
             currentUser = p;
             localStorage.setItem('taskqueue_user_id', p.id);
             renderApp();
+            return;
           }
+        } else {
+          const p = profiles.find(x => x.name.toLowerCase() === username.toLowerCase()) || {
+            id: `usr_${Date.now()}`,
+            name: username,
+            role: 'member',
+            active: true
+          };
+          currentUser = p;
+          localStorage.setItem('taskqueue_user_id', p.id);
+          renderApp();
         }
       } catch (err) {
         authError = err.message || 'Login failed';
@@ -216,6 +283,13 @@
           currentUser = newProfile;
           localStorage.setItem('taskqueue_user_id', newId);
           renderApp();
+        } else {
+          const newId = `user_${Date.now()}`;
+          const newProfile = { id: newId, name: username, role, active: true };
+          profiles.push(newProfile);
+          currentUser = newProfile;
+          localStorage.setItem('taskqueue_user_id', newId);
+          renderApp();
         }
       } catch (err) {
         authError = err.message || 'Signup failed';
@@ -224,14 +298,16 @@
     }
 
     function logout() {
-      if (supabase) supabase.auth.signOut();
+      if (supabase) {
+        try { supabase.auth.signOut(); } catch (e) {}
+      }
       currentUser = null;
       localStorage.removeItem('taskqueue_user_id');
       selectedTaskIds.clear();
       renderApp();
     }
 
-    // Single-Task Timer & Auto-Pause
+    // STRICT SINGLE-TASK TIMER & AUTO-PAUSE
     async function startTask(taskId) {
       if (!currentUser) return;
       const nowISO = new Date().toISOString();
@@ -240,22 +316,26 @@
 
       const targetUserId = task.assignee || currentUser.id;
 
-      // 1. Pause other running tasks for this user
+      // 1. Auto-pause ALL other tasks for this user
       const runningTasks = tasks.filter(t => String(t.assignee) === String(targetUserId) && t.status === 'running' && String(t.id) !== String(taskId));
       for (const t of runningTasks) {
         t.status = 'new';
-        if (supabase) await supabase.from('tasks').update({ status: 'new' }).eq('id', t.id);
+        if (supabase) {
+          try { await supabase.from('tasks').update({ status: 'new' }).eq('id', t.id); } catch (e) {}
+        }
       }
 
-      // 2. Stop running work logs for this user
+      // 2. Close active work logs for this user
       workLogs.forEach(log => {
         if (String(log.user_id) === String(targetUserId) && !log.ended_at) {
           log.ended_at = nowISO;
-          if (supabase) supabase.from('work_log').update({ ended_at: nowISO }).eq('id', log.id);
+          if (supabase) {
+            try { supabase.from('work_log').update({ ended_at: nowISO }).eq('id', log.id); } catch (e) {}
+          }
         }
       });
 
-      // 3. Start task & open log
+      // 3. Start task & record log
       task.status = 'running';
       const newLog = {
         id: `wl_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
@@ -267,8 +347,10 @@
       workLogs.push(newLog);
 
       if (supabase) {
-        await supabase.from('tasks').update({ status: 'running' }).eq('id', taskId);
-        await supabase.from('work_log').insert(newLog);
+        try {
+          await supabase.from('tasks').update({ status: 'running' }).eq('id', taskId);
+          await supabase.from('work_log').insert(newLog);
+        } catch (e) {}
       }
       renderApp();
     }
@@ -282,11 +364,15 @@
       workLogs.forEach(l => {
         if (String(l.task_id) === String(taskId) && !l.ended_at) {
           l.ended_at = nowISO;
-          if (supabase) supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id);
+          if (supabase) {
+            try { supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id); } catch (e) {}
+          }
         }
       });
 
-      if (supabase) await supabase.from('tasks').update({ status: 'new' }).eq('id', taskId);
+      if (supabase) {
+        try { await supabase.from('tasks').update({ status: 'new' }).eq('id', taskId); } catch (e) {}
+      }
       renderApp();
     }
 
@@ -300,11 +386,15 @@
       workLogs.forEach(l => {
         if (String(l.task_id) === String(taskId) && !l.ended_at) {
           l.ended_at = nowISO;
-          if (supabase) supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id);
+          if (supabase) {
+            try { supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id); } catch (e) {}
+          }
         }
       });
 
-      if (supabase) await supabase.from('tasks').update({ status: 'completed', completed_at: nowISO }).eq('id', taskId);
+      if (supabase) {
+        try { await supabase.from('tasks').update({ status: 'completed', completed_at: nowISO }).eq('id', taskId); } catch (e) {}
+      }
       renderApp();
     }
 
@@ -318,21 +408,27 @@
       workLogs.forEach(l => {
         if (String(l.task_id) === String(taskId) && !l.ended_at) {
           l.ended_at = nowISO;
-          if (supabase) supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id);
+          if (supabase) {
+            try { supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id); } catch (e) {}
+          }
         }
       });
 
-      if (supabase) await supabase.from('tasks').update({ status: 'followup', followup_at: nowISO }).eq('id', taskId);
+      if (supabase) {
+        try { await supabase.from('tasks').update({ status: 'followup', followup_at: nowISO }).eq('id', taskId); } catch (e) {}
+      }
       renderApp();
     }
 
-    async function createTask(title, assignee, priority = 'normal', limit_min = null) {
+    // Task Creation with Work Type
+    async function createTask(title, assignee, priority = 'normal', work_type = 'UAN TIC', limit_min = null) {
       if (!title || !title.trim() || !currentUser) return;
       const newTask = {
         id: `t_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
         title: title.trim(),
         status: 'new',
         priority,
+        work_type: work_type || 'OTHER',
         assignee: assignee || currentUser.id,
         creator: currentUser.id,
         limit_min: limit_min ? parseInt(limit_min, 10) : null,
@@ -341,7 +437,9 @@
         acked: false
       };
       tasks.unshift(newTask);
-      if (supabase) await supabase.from('tasks').insert(newTask);
+      if (supabase) {
+        try { await supabase.from('tasks').insert(newTask); } catch (e) {}
+      }
       renderApp();
     }
 
@@ -353,7 +451,9 @@
       tasks = tasks.filter(t => !selectedTaskIds.has(String(t.id)));
       workLogs = workLogs.filter(w => !selectedTaskIds.has(String(w.task_id)));
       selectedTaskIds.clear();
-      if (supabase) await supabase.from('tasks').delete().in('id', idsToDelete);
+      if (supabase) {
+        try { await supabase.from('tasks').delete().in('id', idsToDelete); } catch (e) {}
+      }
       renderApp();
     }
 
@@ -364,7 +464,9 @@
         if (selectedTaskIds.has(String(t.id))) t.assignee = newAssigneeId;
       });
       selectedTaskIds.clear();
-      if (supabase) await supabase.from('tasks').update({ assignee: newAssigneeId }).in('id', ids);
+      if (supabase) {
+        try { await supabase.from('tasks').update({ assignee: newAssigneeId }).in('id', ids); } catch (e) {}
+      }
       renderApp();
     }
 
@@ -386,10 +488,12 @@
       });
       selectedTaskIds.clear();
       if (supabase) {
-        await supabase.from('tasks').update({
-          status: newStatus,
-          completed_at: newStatus === 'completed' ? nowISO : null
-        }).in('id', ids);
+        try {
+          await supabase.from('tasks').update({
+            status: newStatus,
+            completed_at: newStatus === 'completed' ? nowISO : null
+          }).in('id', ids);
+        } catch (e) {}
       }
       renderApp();
     }
@@ -406,13 +510,17 @@
         created_at: new Date().toISOString()
       };
       paymentSheet.unshift(entry);
-      if (supabase) await supabase.from('payment_sheet').insert(entry);
+      if (supabase) {
+        try { await supabase.from('payment_sheet').insert(entry); } catch (e) {}
+      }
       renderApp();
     }
 
     async function deletePaymentEntry(id) {
       paymentSheet = paymentSheet.filter(p => String(p.id) !== String(id));
-      if (supabase) await supabase.from('payment_sheet').delete().eq('id', id);
+      if (supabase) {
+        try { await supabase.from('payment_sheet').delete().eq('id', id); } catch (e) {}
+      }
       renderApp();
     }
 
@@ -436,7 +544,6 @@
       document.body.removeChild(link);
     }
 
-    // 1-second live timer tick
     setInterval(() => {
       const activeLogs = workLogs.filter(w => !w.ended_at);
       if (activeLogs.length > 0) {
@@ -444,355 +551,433 @@
           const tid = el.getAttribute('data-timer-task-id');
           el.textContent = formatDuration(getTaskDuration(tid));
         });
-        const liveClock = document.getElementById('ist-live-clock');
-        if (liveClock) liveClock.textContent = getISTString();
       }
+      const liveClock = document.getElementById('ist-live-clock');
+      if (liveClock) liveClock.textContent = getISTString();
     }, 1000);
 
+    // ==========================================
+    // RENDER ENGINE
+    // ==========================================
     function renderApp() {
       const app = document.getElementById('app');
       if (!app) return;
 
-      if (!currentUser) {
-        app.innerHTML = renderAuthScreen();
-        lucide.createIcons();
-        return;
-      }
+      try {
+        if (!currentUser) {
+          app.innerHTML = renderAuthScreen();
+          safeRenderIcons();
+          return;
+        }
 
-      const isAdmin = currentUser.role === 'admin';
-      let baseTasks = tasks;
-      if (!isAdmin && currentFilter !== 'all_team') {
-        baseTasks = tasks.filter(t => String(t.assignee) === String(currentUser.id));
-      }
+        const isAdmin = currentUser.role === 'admin';
+        let baseTasks = tasks;
+        if (!isAdmin && currentFilter !== 'all_team') {
+          baseTasks = tasks.filter(t => String(t.assignee) === String(currentUser.id));
+        }
 
-      const incompleteTasks = baseTasks.filter(t => t.status !== 'completed');
-      const liveTasks = baseTasks.filter(t => t.status === 'running');
-      const urgentTasks = baseTasks.filter(t => t.priority === 'urgent' && t.status !== 'completed');
-      const followupTasks = baseTasks.filter(t => t.status === 'followup');
-      const completedTasks = baseTasks.filter(t => t.status === 'completed');
+        const incompleteTasks = baseTasks.filter(t => t.status !== 'completed');
+        const liveTasks = baseTasks.filter(t => t.status === 'running');
+        const urgentTasks = baseTasks.filter(t => t.priority === 'urgent' && t.status !== 'completed');
+        const followupTasks = baseTasks.filter(t => t.status === 'followup');
+        const completedTasks = baseTasks.filter(t => t.status === 'completed');
 
-      let displayedTasks = [];
-      if (currentFilter === 'front') {
-        const liveIds = new Set(liveTasks.map(t => String(t.id)));
-        const urgentNotLive = urgentTasks.filter(t => !liveIds.has(String(t.id)));
-        displayedTasks = [...liveTasks, ...urgentNotLive];
-      } else if (currentFilter === 'total') displayedTasks = incompleteTasks;
-      else if (currentFilter === 'live') displayedTasks = liveTasks;
-      else if (currentFilter === 'urgent') displayedTasks = urgentTasks;
-      else if (currentFilter === 'followup') displayedTasks = followupTasks;
-      else if (currentFilter === 'completed') displayedTasks = completedTasks;
-      else if (currentFilter === 'all_team') displayedTasks = tasks.filter(t => t.status !== 'completed');
-      else if (currentFilter === 'members' && selectedMemberId) displayedTasks = tasks.filter(t => String(t.assignee) === String(selectedMemberId) && t.status !== 'completed');
-      else displayedTasks = incompleteTasks;
+        let tabTasks = [];
+        if (currentFilter === 'front') {
+          const liveIds = new Set(liveTasks.map(t => String(t.id)));
+          const urgentNotLive = urgentTasks.filter(t => !liveIds.has(String(t.id)));
+          tabTasks = [...liveTasks, ...urgentNotLive];
+        } else if (currentFilter === 'total') {
+          tabTasks = incompleteTasks;
+        } else if (currentFilter === 'live') {
+          tabTasks = liveTasks;
+        } else if (currentFilter === 'urgent') {
+          tabTasks = urgentTasks;
+        } else if (currentFilter === 'followup') {
+          tabTasks = followupTasks;
+        } else if (currentFilter === 'completed') {
+          tabTasks = completedTasks;
+        } else if (currentFilter === 'all_team') {
+          tabTasks = tasks.filter(t => t.status !== 'completed');
+        } else if (currentFilter === 'members' && selectedMemberId) {
+          tabTasks = tasks.filter(t => String(t.assignee) === String(selectedMemberId) && t.status !== 'completed');
+        } else {
+          tabTasks = incompleteTasks;
+        }
 
-      const allDisplayedSelected = displayedTasks.length > 0 && displayedTasks.every(t => selectedTaskIds.has(String(t.id)));
+        // Sub-category filter: ALL | UAN TIC | RECEPTION | OTHER
+        let displayedTasks = tabTasks;
+        if (currentWorkTypeFilter !== 'ALL') {
+          displayedTasks = tabTasks.filter(t => (t.work_type || 'OTHER') === currentWorkTypeFilter);
+        }
 
-      app.innerHTML = `
-        <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-xs">
-          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-            <div class="flex items-center gap-4">
-              <div class="flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/20">
-                  <i data-lucide="layers" class="w-5 h-5"></i>
-                </div>
-                <div class="leading-tight">
-                  <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">TaskQueue</span>
-                </div>
-              </div>
-              <div class="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-mono text-slate-600 dark:text-slate-400">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>IST:</span>
-                <span id="ist-live-clock" class="font-semibold text-slate-900 dark:text-slate-200">${getISTString()}</span>
-              </div>
-            </div>
+        const allDisplayedSelected = displayedTasks.length > 0 && displayedTasks.every(t => selectedTaskIds.has(String(t.id)));
 
-            <!-- Header Actions: Payment Sheet, Theme Switcher, Name Only -->
-            <div class="flex items-center gap-2 sm:gap-3">
-              <button onclick="openPaymentSheet()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold border border-emerald-200 dark:border-emerald-800 transition">
-                <i data-lucide="receipt" class="w-4 h-4"></i>
-                <span>Payment Sheet</span>
-              </button>
-
-              <!-- Light & Dark Theme Preference Switcher -->
-              <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                <button onclick="setThemeMode('light')" title="Light Theme" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'light' ? 'bg-white text-amber-600 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
-                  <i data-lucide="sun" class="w-3.5 h-3.5"></i>
-                </button>
-                <button onclick="setThemeMode('dark')" title="Dark Theme" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'dark' ? 'bg-slate-700 text-indigo-400 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
-                  <i data-lucide="moon" class="w-3.5 h-3.5"></i>
-                </button>
-                <button onclick="setThemeMode('system')" title="System Theme" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'system' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
-                  <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
-                </button>
-              </div>
-
-              <!-- Name Only Display (No Role Label) -->
-              <div class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
-                <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-xs uppercase">
-                  ${(currentUser.name || 'U').slice(0, 2)}
-                </div>
-                <div class="text-left hidden sm:block">
-                  <div class="text-xs font-bold text-slate-900 dark:text-slate-100 leading-none">${currentUser.name}</div>
-                  <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                    ${formatDuration(getUserWorkTimeToday(currentUser.id))} today
+        app.innerHTML = `
+          <!-- HEADER -->
+          <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-xs">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/20">
+                    <i data-lucide="layers" class="w-5 h-5"></i>
+                  </div>
+                  <div class="leading-tight">
+                    <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">TaskQueue</span>
                   </div>
                 </div>
-                <button onclick="logout()" title="Logout" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-md transition">
-                  <i data-lucide="log-out" class="w-4 h-4"></i>
+                <div class="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-mono text-slate-600 dark:text-slate-400">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>IST:</span>
+                  <span id="ist-live-clock" class="font-semibold text-slate-900 dark:text-slate-200">${getISTString()}</span>
+                </div>
+              </div>
+
+              <!-- Header Actions: Payment Sheet, Theme Switcher, User Name Only -->
+              <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="openPaymentSheet()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold border border-emerald-200 dark:border-emerald-800 transition">
+                  <i data-lucide="receipt" class="w-4 h-4"></i>
+                  <span>Payment Sheet</span>
                 </button>
+
+                <!-- Light, Dark, System Switcher -->
+                <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <button onclick="setThemeMode('light')" title="Light Theme" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'light' ? 'bg-white text-amber-600 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                    <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="setThemeMode('dark')" title="Dark Theme" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'dark' ? 'bg-slate-700 text-indigo-400 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                    <i data-lucide="moon" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="setThemeMode('system')" title="System Theme" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'system' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                    <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+
+                <!-- User Name (No Role Label) -->
+                <div class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+                  <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-xs uppercase">
+                    ${((currentUser && currentUser.name) || 'U').slice(0, 2)}
+                  </div>
+                  <div class="text-left hidden sm:block">
+                    <div class="text-xs font-bold text-slate-900 dark:text-slate-100 leading-none">${currentUser.name || 'Member'}</div>
+                    <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                      ${formatDuration(getUserWorkTimeToday(currentUser.id))} today
+                    </div>
+                  </div>
+                  <button onclick="logout()" title="Logout" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-md transition">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
-          <!-- Fast 1-row Dispatch -->
-          <div class="mb-6 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
-            <form id="fast-dispatch-form" onsubmit="handleFastDispatch(event)" class="flex flex-col sm:flex-row items-center gap-2.5">
-              <div class="relative flex-1 w-full">
-                <i data-lucide="plus-circle" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input id="dispatch-title" type="text" placeholder="Type new task name & press Enter..." required
-                  class="w-full pl-9 pr-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100" />
-              </div>
+          <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
+            <!-- 1. FAST 1-ROW DISPATCH WITH WORK TYPE -->
+            <div class="mb-6 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+              <form id="fast-dispatch-form" onsubmit="handleFastDispatch(event)" class="flex flex-col sm:flex-row items-center gap-2.5">
+                <div class="relative flex-1 w-full">
+                  <i data-lucide="plus-circle" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                  <input id="dispatch-title" type="text" placeholder="Type new task name & press Enter..." required
+                    class="w-full pl-9 pr-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100" />
+                </div>
 
-              <select id="dispatch-assignee" class="w-full sm:w-44 py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200">
-                ${profiles.map(p => `
-                  <option value="${p.id}" ${String(p.id) === String(currentUser.id) ? 'selected' : ''}>${p.name}</option>
-                `).join('')}
-              </select>
+                <select id="dispatch-assignee" class="w-full sm:w-40 py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                  ${profiles.map(p => `
+                    <option value="${p.id}" ${String(p.id) === String(currentUser.id) ? 'selected' : ''}>${p.name || 'Member'}</option>
+                  `).join('')}
+                </select>
 
-              <input id="dispatch-budget" type="number" min="1" placeholder="Mins budget (opt)"
-                class="w-full sm:w-32 py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200" />
+                <!-- Work Type Selector -->
+                <select id="dispatch-worktype" class="w-full sm:w-36 py-2 px-3 text-xs font-bold rounded-lg bg-slate-50 dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900 text-indigo-700 dark:text-indigo-400">
+                  <option value="UAN TIC">UAN TIC</option>
+                  <option value="RECEPTION">RECEPTION</option>
+                  <option value="OTHER">OTHER</option>
+                </select>
 
-              <button type="button" id="dispatch-priority-btn" onclick="toggleDispatchPriority()"
-                class="w-full sm:w-auto px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100">
-                Normal
+                <input id="dispatch-budget" type="number" min="1" placeholder="Mins (opt)"
+                  class="w-full sm:w-24 py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200" />
+
+                <button type="button" id="dispatch-priority-btn" onclick="toggleDispatchPriority()"
+                  class="w-full sm:w-auto px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100">
+                  Normal
+                </button>
+                <input type="hidden" id="dispatch-priority" value="normal" />
+
+                <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition shrink-0">
+                  <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                  <span>Dispatch</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- 2. KPI CARD BUTTONS -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+              <button onclick="setTab('front')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'front' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-400'}">
+                <div class="flex items-center justify-between text-xs font-semibold opacity-90">
+                  <span>Front Panel</span>
+                  <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                </div>
+                <div class="text-2xl font-black mt-2 leading-none">${liveTasks.length + urgentTasks.filter(u => u.status !== 'running').length}</div>
+                <div class="text-[10px] mt-1 opacity-75">Live & Urgent only</div>
               </button>
-              <input type="hidden" id="dispatch-priority" value="normal" />
 
-              <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition">
-                <i data-lucide="send" class="w-3.5 h-3.5"></i>
-                <span>Dispatch</span>
+              <button onclick="setTab('total')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'total' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-400'}">
+                <div class="flex items-center justify-between text-xs font-semibold opacity-90">
+                  <span>Total Tasks</span>
+                  <i data-lucide="check-square" class="w-4 h-4"></i>
+                </div>
+                <div class="text-2xl font-black mt-2 leading-none">${incompleteTasks.length}</div>
+                <div class="text-[10px] mt-1 opacity-75">Incomplete only</div>
               </button>
-            </form>
-          </div>
 
-          <!-- KPI Cards -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-            <button onclick="setTab('front')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'front' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-400'}">
-              <div class="flex items-center justify-between text-xs font-semibold opacity-90">
-                <span>Front Panel</span>
-                <i data-lucide="layout-grid" class="w-4 h-4"></i>
-              </div>
-              <div class="text-2xl font-black mt-2 leading-none">${liveTasks.length + urgentTasks.filter(u => u.status !== 'running').length}</div>
-              <div class="text-[10px] mt-1 opacity-75">Live & Urgent only</div>
-            </button>
+              <button onclick="setTab('live')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'live' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-400'}">
+                <div class="flex items-center justify-between text-xs font-semibold opacity-90">
+                  <span>Live Tasks</span>
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                </div>
+                <div class="text-2xl font-black mt-2 leading-none text-emerald-500 ${currentFilter === 'live' ? '!text-white' : ''}">${liveTasks.length}</div>
+                <div class="text-[10px] mt-1 opacity-75">Active & Running</div>
+              </button>
 
-            <button onclick="setTab('total')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'total' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-400'}">
-              <div class="flex items-center justify-between text-xs font-semibold opacity-90">
-                <span>Total Tasks</span>
-                <i data-lucide="check-square" class="w-4 h-4"></i>
-              </div>
-              <div class="text-2xl font-black mt-2 leading-none">${incompleteTasks.length}</div>
-              <div class="text-[10px] mt-1 opacity-75">Incomplete only</div>
-            </button>
+              <button onclick="setTab('urgent')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'urgent' ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400'}">
+                <div class="flex items-center justify-between text-xs font-semibold opacity-90">
+                  <span>Urgent</span>
+                  <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                </div>
+                <div class="text-2xl font-black mt-2 leading-none text-rose-500 ${currentFilter === 'urgent' ? '!text-white' : ''}">${urgentTasks.length}</div>
+                <div class="text-[10px] mt-1 opacity-75">High Priority</div>
+              </button>
 
-            <button onclick="setTab('live')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'live' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-400'}">
-              <div class="flex items-center justify-between text-xs font-semibold opacity-90">
-                <span>Live Tasks</span>
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              </div>
-              <div class="text-2xl font-black mt-2 leading-none text-emerald-500 ${currentFilter === 'live' ? '!text-white' : ''}">${liveTasks.length}</div>
-              <div class="text-[10px] mt-1 opacity-75">Active & Running</div>
-            </button>
+              <button onclick="setTab('followup')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'followup' ? 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-amber-400'}">
+                <div class="flex items-center justify-between text-xs font-semibold opacity-90">
+                  <span>Follow-up</span>
+                  <i data-lucide="clock" class="w-4 h-4"></i>
+                </div>
+                <div class="text-2xl font-black mt-2 leading-none text-amber-500 ${currentFilter === 'followup' ? '!text-white' : ''}">${followupTasks.length}</div>
+                <div class="text-[10px] mt-1 opacity-75">Needs Follow-up</div>
+              </button>
 
-            <button onclick="setTab('urgent')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'urgent' ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400'}">
-              <div class="flex items-center justify-between text-xs font-semibold opacity-90">
-                <span>Urgent</span>
-                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-              </div>
-              <div class="text-2xl font-black mt-2 leading-none text-rose-500 ${currentFilter === 'urgent' ? '!text-white' : ''}">${urgentTasks.length}</div>
-              <div class="text-[10px] mt-1 opacity-75">High Priority</div>
-            </button>
+              <button onclick="setTab('completed')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'completed' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-400'}">
+                <div class="flex items-center justify-between text-xs font-semibold opacity-90">
+                  <span>Completed</span>
+                  <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                </div>
+                <div class="text-2xl font-black mt-2 leading-none">${completedTasks.length}</div>
+                <div class="text-[10px] mt-1 opacity-75">Finished Archive</div>
+              </button>
+            </div>
 
-            <button onclick="setTab('followup')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'followup' ? 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-amber-400'}">
-              <div class="flex items-center justify-between text-xs font-semibold opacity-90">
-                <span>Follow-up</span>
-                <i data-lucide="clock" class="w-4 h-4"></i>
-              </div>
-              <div class="text-2xl font-black mt-2 leading-none text-amber-500 ${currentFilter === 'followup' ? '!text-white' : ''}">${followupTasks.length}</div>
-              <div class="text-[10px] mt-1 opacity-75">Needs Follow-up</div>
-            </button>
-
-            <button onclick="setTab('completed')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'completed' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-400'}">
-              <div class="flex items-center justify-between text-xs font-semibold opacity-90">
-                <span>Completed</span>
-                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-              </div>
-              <div class="text-2xl font-black mt-2 leading-none">${completedTasks.length}</div>
-              <div class="text-[10px] mt-1 opacity-75">Finished Archive</div>
-            </button>
-          </div>
-
-          <!-- Admin Members Section -->
-          ${isAdmin ? `
-            <div class="mb-6 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-              <div class="flex items-center justify-between mb-3">
-                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Team Working Hours Today</span>
-                <span class="text-xs text-slate-500 font-mono">${profiles.length} team members</span>
-              </div>
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                ${profiles.map(p => {
-                  const pWorkSec = getUserWorkTimeToday(p.id);
-                  const pIncomplete = tasks.filter(t => String(t.assignee) === String(p.id) && t.status !== 'completed').length;
-                  const isSelected = selectedMemberId === p.id;
+            <!-- 3. SUB-CATEGORY BUTTONS: UAN TIC | RECEPTION | OTHER -->
+            <div class="mb-6 p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">Category:</span>
+                ${['ALL', 'UAN TIC', 'RECEPTION', 'OTHER'].map(wt => {
+                  const count = tabTasks.filter(t => wt === 'ALL' ? true : (t.work_type || 'OTHER') === wt).length;
+                  const isAct = currentWorkTypeFilter === wt;
                   return `
-                    <button onclick="filterByMember('${p.id}')" class="p-2.5 rounded-lg border text-left transition ${isSelected ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'}">
-                      <div class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">${p.name}</div>
-                      <div class="flex items-center justify-between mt-1 text-[11px] font-mono">
-                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">${formatDuration(pWorkSec)}</span>
-                        <span class="text-slate-500">${pIncomplete} active</span>
-                      </div>
+                    <button onclick="setWorkTypeFilter('${wt}')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${isAct ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}">
+                      <span>${wt === 'ALL' ? 'All' : wt}</span>
+                      <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono ${isAct ? 'bg-indigo-700 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}">
+                        ${count}
+                      </span>
                     </button>
                   `;
                 }).join('')}
               </div>
+
+              ${currentWorkTypeFilter !== 'ALL' ? `
+                <button onclick="setWorkTypeFilter('ALL')" class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline px-2">
+                  Reset Category
+                </button>
+              ` : ''}
+            </div>
+
+            <!-- Admin Member Hours View -->
+            ${isAdmin ? `
+              <div class="mb-6 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Team Working Hours Today</span>
+                  <span class="text-xs text-slate-500 font-mono">${profiles.length} team members</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  ${profiles.map(p => {
+                    const pWorkSec = getUserWorkTimeToday(p.id);
+                    const pIncomplete = tasks.filter(t => String(t.assignee) === String(p.id) && t.status !== 'completed').length;
+                    const isSelected = selectedMemberId === p.id;
+                    return `
+                      <button onclick="filterByMember('${p.id}')" class="p-2.5 rounded-lg border text-left transition ${isSelected ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'}">
+                        <div class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">${p.name || 'Member'}</div>
+                        <div class="flex items-center justify-between mt-1 text-[11px] font-mono">
+                          <span class="text-indigo-600 dark:text-indigo-400 font-semibold">${formatDuration(pWorkSec)}</span>
+                          <span class="text-slate-500">${pIncomplete} active</span>
+                        </div>
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- 4. TASK ROWS LIST -->
+            <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+              <div class="px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                  <input type="checkbox" onchange="toggleSelectAll(this.checked)" ${allDisplayedSelected ? 'checked' : ''}
+                    class="w-4 h-4 rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                  <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    ${currentFilter === 'front' ? 'Front Panel (Live & Urgent)' :
+                      currentFilter === 'total' ? 'Total Incomplete Tasks' :
+                      currentFilter === 'all_team' ? 'All Team Assigned Tasks' :
+                      currentFilter.toUpperCase() + ' TASKS'} 
+                    ${currentWorkTypeFilter !== 'ALL' ? `· <span class="text-indigo-600 dark:text-indigo-400">${currentWorkTypeFilter}</span>` : ''} 
+                    (${displayedTasks.length})
+                  </span>
+                </div>
+                <div class="text-xs text-slate-500 font-mono">Click task for details</div>
+              </div>
+
+              ${displayedTasks.length === 0 ? `
+                <div class="py-12 text-center text-slate-400">
+                  <i data-lucide="check-circle" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                  <div class="text-sm font-medium">No tasks found matching this category</div>
+                </div>
+              ` : `
+                <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                  ${displayedTasks.map(task => {
+                    const isChecked = selectedTaskIds.has(String(task.id));
+                    const isRunning = task.status === 'running';
+                    const assigneeName = (profiles.find(p => String(p.id) === String(task.assignee)) || {}).name || 'Unassigned';
+                    const durationSec = getTaskDuration(task.id);
+                    const wt = task.work_type || 'OTHER';
+
+                    return `
+                      <div class="flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition cursor-pointer group ${isChecked ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : ''}"
+                           onclick="openTaskDetail('${task.id}')">
+                        <div class="flex items-center gap-3 min-w-0 flex-1 pr-4" onclick="event.stopPropagation()">
+                          <input type="checkbox" onchange="toggleSelectTask('${task.id}', this.checked)" ${isChecked ? 'checked' : ''}
+                            class="w-4 h-4 rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+
+                          <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                wt === 'UAN TIC' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300' :
+                                wt === 'RECEPTION' ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300' :
+                                'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                              }">
+                                ${wt}
+                              </span>
+
+                              ${task.priority === 'urgent' ? `
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">URGENT</span>
+                              ` : ''}
+
+                              <span class="text-sm font-medium text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
+                                ${task.title}
+                              </span>
+                            </div>
+                          </div>
+
+                          ${isAdmin ? `
+                            <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">
+                              <i data-lucide="user" class="w-3 h-3 text-slate-400"></i>
+                              <span>${assigneeName}</span>
+                            </div>
+                          ` : ''}
+                        </div>
+
+                        <div class="flex items-center gap-3 shrink-0" onclick="event.stopPropagation()">
+                          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-semibold ${isRunning ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}">
+                            ${isRunning ? `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>` : ''}
+                            <span data-timer-task-id="${task.id}">${formatDuration(durationSec)}</span>
+                          </div>
+
+                          ${isRunning ? `
+                            <button onclick="pauseTask('${task.id}')" title="Pause Task" class="p-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white transition">
+                              <i data-lucide="pause" class="w-4 h-4"></i>
+                            </button>
+                          ` : task.status !== 'completed' ? `
+                            <button onclick="startTask('${task.id}')" title="Start Task" class="p-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white transition">
+                              <i data-lucide="play" class="w-4 h-4"></i>
+                            </button>
+                          ` : `
+                            <span class="text-xs text-slate-400 font-semibold px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded">Done</span>
+                          `}
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              `}
+            </div>
+
+            <div class="mt-6 flex justify-center">
+              <button onclick="setTab('all_team')" class="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-xs shadow-xs transition">
+                <i data-lucide="users" class="w-4 h-4 text-indigo-500"></i>
+                <span>View All Assigned Team Tasks (Excluding Completed)</span>
+              </button>
+            </div>
+          </main>
+
+          <!-- Floating Bulk Action Bar -->
+          ${selectedTaskIds.size > 0 ? `
+            <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white dark:bg-slate-800 rounded-2xl shadow-2xl px-5 py-3.5 flex flex-wrap items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-4">
+              <div class="text-xs font-bold text-indigo-300 pr-2 border-r border-slate-700">
+                ${selectedTaskIds.size} Selected
+              </div>
+
+              <select onchange="bulkAssignSelected(this.value)" class="text-xs py-1.5 px-2.5 rounded-lg bg-slate-800 dark:bg-slate-700 border border-slate-600 text-white focus:outline-hidden">
+                <option value="">Reassign to...</option>
+                ${profiles.map(p => `<option value="${p.id}">${p.name || 'Member'}</option>`).join('')}
+              </select>
+
+              <div class="flex items-center gap-1.5">
+                <button onclick="bulkSetSection('new')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg font-medium transition">
+                  Pause / Reset
+                </button>
+                <button onclick="bulkSetSection('followup')" class="px-2.5 py-1.5 bg-amber-600/80 hover:bg-amber-600 text-xs rounded-lg font-medium transition">
+                  Follow-up
+                </button>
+                <button onclick="bulkSetSection('completed')" class="px-2.5 py-1.5 bg-emerald-600/80 hover:bg-emerald-600 text-xs rounded-lg font-medium transition">
+                  Complete
+                </button>
+              </div>
+
+              <button onclick="bulkDeleteSelected()" class="p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition" title="Delete Selected">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+
+              <button onclick="clearSelection()" class="text-slate-400 hover:text-white text-xs underline pl-2">
+                Cancel
+              </button>
             </div>
           ` : ''}
 
-          <!-- Task Rows -->
-          <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-            <div class="px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
-              <div class="flex items-center gap-3">
-                <input type="checkbox" onchange="toggleSelectAll(this.checked)" ${allDisplayedSelected ? 'checked' : ''}
-                  class="w-4 h-4 rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
-                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  ${currentFilter === 'front' ? 'Front Panel (Live & Urgent)' :
-                    currentFilter === 'total' ? 'Total Incomplete Tasks' :
-                    currentFilter === 'all_team' ? 'All Team Assigned Tasks' :
-                    currentFilter.toUpperCase() + ' TASKS'} (${displayedTasks.length})
-                </span>
-              </div>
-              <div class="text-xs text-slate-500 font-mono">Click task for details</div>
-            </div>
-
-            ${displayedTasks.length === 0 ? `
-              <div class="py-12 text-center text-slate-400">
-                <i data-lucide="check-circle" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
-                <div class="text-sm font-medium">No tasks found in this section</div>
-              </div>
-            ` : `
-              <div class="divide-y divide-slate-100 dark:divide-slate-800">
-                ${displayedTasks.map(task => {
-                  const isChecked = selectedTaskIds.has(String(task.id));
-                  const isRunning = task.status === 'running';
-                  const assigneeName = (profiles.find(p => String(p.id) === String(task.assignee)) || {}).name || 'Unassigned';
-                  const durationSec = getTaskDuration(task.id);
-
-                  return `
-                    <div class="flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition cursor-pointer group ${isChecked ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : ''}"
-                         onclick="openTaskDetail('${task.id}')">
-                      <div class="flex items-center gap-3 min-w-0 flex-1 pr-4" onclick="event.stopPropagation()">
-                        <input type="checkbox" onchange="toggleSelectTask('${task.id}', this.checked)" ${isChecked ? 'checked' : ''}
-                          class="w-4 h-4 rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
-
-                        <!-- Task Name Only for Member; Task Name + Assigned For Admin -->
-                        <div class="min-w-0 flex-1">
-                          <div class="flex items-center gap-2">
-                            ${task.priority === 'urgent' ? `
-                              <span class="px-1.5 py-0.5 rounded-sm bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 text-[10px] font-bold">URGENT</span>
-                            ` : ''}
-                            <span class="text-sm font-medium text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
-                              ${task.title}
-                            </span>
-                          </div>
-                        </div>
-
-                        ${isAdmin ? `
-                          <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">
-                            <i data-lucide="user" class="w-3 h-3 text-slate-400"></i>
-                            <span>${assigneeName}</span>
-                          </div>
-                        ` : ''}
-                      </div>
-
-                      <div class="flex items-center gap-3 shrink-0" onclick="event.stopPropagation()">
-                        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-semibold ${isRunning ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}">
-                          ${isRunning ? `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>` : ''}
-                          <span data-timer-task-id="${task.id}">${formatDuration(durationSec)}</span>
-                        </div>
-
-                        ${isRunning ? `
-                          <button onclick="pauseTask('${task.id}')" title="Pause Task" class="p-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white transition">
-                            <i data-lucide="pause" class="w-4 h-4"></i>
-                          </button>
-                        ` : task.status !== 'completed' ? `
-                          <button onclick="startTask('${task.id}')" title="Start Task" class="p-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white transition">
-                            <i data-lucide="play" class="w-4 h-4"></i>
-                          </button>
-                        ` : `
-                          <span class="text-xs text-slate-400 font-semibold px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded">Done</span>
-                        `}
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            `}
+          ${showPaymentModal ? renderPaymentModal() : ''}
+          ${inspectingTaskId ? renderTaskDetailModal(inspectingTaskId) : ''}
+        `;
+      } catch (renderError) {
+        console.error("Render catch:", renderError);
+        app.innerHTML = `
+          <div class="p-8 text-center max-w-lg mx-auto mt-12 bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900 shadow-xl">
+            <h3 class="text-lg font-bold text-red-600 mb-2">Display Notice</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-300 mb-4">${renderError.message}</p>
+            <button onclick="location.reload()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold">Reload App</button>
           </div>
+        `;
+      }
 
-          <div class="mt-6 flex justify-center">
-            <button onclick="setTab('all_team')" class="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-xs shadow-xs transition">
-              <i data-lucide="users" class="w-4 h-4 text-indigo-500"></i>
-              <span>View All Assigned Team Tasks (Excluding Completed)</span>
-            </button>
-          </div>
-        </main>
-
-        <!-- Floating Bulk Bar -->
-        ${selectedTaskIds.size > 0 ? `
-          <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white dark:bg-slate-800 rounded-2xl shadow-2xl px-5 py-3.5 flex flex-wrap items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-4">
-            <div class="text-xs font-bold text-indigo-300 pr-2 border-r border-slate-700">
-              ${selectedTaskIds.size} Selected
-            </div>
-
-            <select onchange="bulkAssignSelected(this.value)" class="text-xs py-1.5 px-2.5 rounded-lg bg-slate-800 dark:bg-slate-700 border border-slate-600 text-white focus:outline-hidden">
-              <option value="">Reassign to...</option>
-              ${profiles.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
-            </select>
-
-            <div class="flex items-center gap-1.5">
-              <button onclick="bulkSetSection('new')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg font-medium transition">
-                Pause / Reset
-              </button>
-              <button onclick="bulkSetSection('followup')" class="px-2.5 py-1.5 bg-amber-600/80 hover:bg-amber-600 text-xs rounded-lg font-medium transition">
-                Follow-up
-              </button>
-              <button onclick="bulkSetSection('completed')" class="px-2.5 py-1.5 bg-emerald-600/80 hover:bg-emerald-600 text-xs rounded-lg font-medium transition">
-                Complete
-              </button>
-            </div>
-
-            <button onclick="bulkDeleteSelected()" class="p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition" title="Delete Selected">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
-
-            <button onclick="clearSelection()" class="text-slate-400 hover:text-white text-xs underline pl-2">
-              Cancel
-            </button>
-          </div>
-        ` : ''}
-
-        ${showPaymentModal ? renderPaymentModal() : ''}
-        ${inspectingTaskId ? renderTaskDetailModal(inspectingTaskId) : ''}
-      `;
-
-      lucide.createIcons();
+      safeRenderIcons();
     }
 
     function setTab(tab) {
       currentFilter = tab;
       selectedMemberId = null;
+      renderApp();
+    }
+
+    function setWorkTypeFilter(wt) {
+      currentWorkTypeFilter = wt;
       renderApp();
     }
 
@@ -827,6 +1012,10 @@
       else if (currentFilter === 'members' && selectedMemberId) currentList = tasks.filter(t => String(t.assignee) === String(selectedMemberId) && t.status !== 'completed');
       else currentList = baseTasks.filter(t => t.status !== 'completed');
 
+      if (currentWorkTypeFilter !== 'ALL') {
+        currentList = currentList.filter(t => (t.work_type || 'OTHER') === currentWorkTypeFilter);
+      }
+
       if (checked) currentList.forEach(t => selectedTaskIds.add(String(t.id)));
       else selectedTaskIds.clear();
       renderApp();
@@ -855,9 +1044,10 @@
       e.preventDefault();
       const title = document.getElementById('dispatch-title').value;
       const assignee = document.getElementById('dispatch-assignee').value;
+      const worktype = document.getElementById('dispatch-worktype').value;
       const budget = document.getElementById('dispatch-budget').value;
       const priority = document.getElementById('dispatch-priority').value;
-      createTask(title, assignee, priority, budget);
+      createTask(title, assignee, priority, worktype, budget);
       document.getElementById('fast-dispatch-form').reset();
     }
 
@@ -941,16 +1131,26 @@
       const duration = getTaskDuration(taskId);
       const assigneeName = (profiles.find(p => String(p.id) === String(task.assignee)) || {}).name || 'Unassigned';
       const taskComments = comments.filter(c => String(c.task_id) === String(taskId));
+      const wt = task.work_type || 'OTHER';
 
       return `
         <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[90vh]">
             <div class="flex items-start justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
               <div class="flex-1 pr-4">
-                <div class="flex items-center gap-2 mb-1.5">
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${task.priority === 'urgent' ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}">
-                    ${task.priority}
+                <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+                    wt === 'UAN TIC' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300' :
+                    wt === 'RECEPTION' ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300' :
+                    'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                  }">
+                    ${wt}
                   </span>
+                  ${task.priority === 'urgent' ? `
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
+                      URGENT
+                    </span>
+                  ` : ''}
                   <span class="text-xs text-slate-400 font-mono">Assigned to ${assigneeName}</span>
                 </div>
                 <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 leading-snug">${task.title}</h3>
@@ -967,7 +1167,7 @@
                   ${formatDuration(duration)}
                 </div>
                 <div class="text-[10px] text-slate-400 mt-1">
-                  ${isRunning ? 'Timer counts ONLY while running. Starting another task will auto-pause this.' : 'Paused - Timer stopped'}
+                  ${isRunning ? 'Timer counts ONLY while running. Starting another task auto-pauses this.' : 'Paused - Timer stopped'}
                 </div>
               </div>
               <div>
@@ -1031,12 +1231,14 @@
       const newComment = {
         id: `c_${Date.now()}`,
         task_id: String(taskId),
-        author: currentUser.name,
+        author: currentUser.name || 'Member',
         body,
         created_at: new Date().toISOString()
       };
       comments.push(newComment);
-      if (supabase) await supabase.from('comments').insert(newComment);
+      if (supabase) {
+        try { await supabase.from('comments').insert(newComment); } catch (e) {}
+      }
       input.value = '';
       renderApp();
     }
@@ -1052,7 +1254,7 @@
                 </div>
                 <div>
                   <h2 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">TaskQueue</h2>
-                  <p class="text-xs text-slate-500">Team Operations & Working Hours Tracker</p>
+                  <p class="text-xs text-slate-500">Team Operations & Work Hours</p>
                 </div>
               </div>
               <button onclick="toggleThemeQuick()" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -1105,7 +1307,7 @@
                 <div class="grid grid-cols-2 gap-2">
                   ${profiles.slice(0, 4).map(p => `
                     <button onclick="quickLogin('${p.id}')" class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                      ${p.name}
+                      ${p.name || 'Member'}
                     </button>
                   `).join('')}
                 </div>
@@ -1142,7 +1344,11 @@
       }
     }
 
-    loadData();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadData);
+    } else {
+      loadData();
+    }
   </script>
 </body>
   </html>

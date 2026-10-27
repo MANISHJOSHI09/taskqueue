@@ -1,139 +1,1148 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Team Task Queue</title>
-<style>
-:root{--bg:#f6f7f9;--c:#fff;--t:#1b1f24;--m:#667085;--b:#e3e6ea;--p:#2563eb;--r:#dc2626;--g:#16a34a;--gb:#dcfce7;--yb:#fef3c7;--rb:#fee2e2;--fb:#ede9fe;color-scheme:light}
-@media(prefers-color-scheme:dark){:root{--bg:#101318;--c:#1a1f27;--t:#eceff3;--m:#9aa4b2;--b:#2b323c;--p:#60a5fa;--r:#f87171;--g:#4ade80;--gb:#12351f;--yb:#3a3112;--rb:#3d1a1a;--fb:#2a2250;color-scheme:dark}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.w{max-width:1100px;margin:0 auto;padding:12px}.top{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-nav{display:flex;gap:6px;overflow-x:auto;margin:10px 0;padding-bottom:4px}nav button{white-space:nowrap}nav .on{background:var(--p);color:#fff;border-color:var(--p)}
-.c{background:var(--c);border:1px solid var(--b);border-radius:12px;padding:12px;margin-bottom:10px}.rw{border:1px solid var(--b);border-radius:10px;padding:8px;margin:8px 0}
-button,select,input,textarea{font:inherit;color:var(--t);background:var(--c);border:1px solid var(--b);border-radius:8px;padding:6px 10px}button{cursor:pointer}button.p{background:var(--p);color:#fff;border-color:var(--p)}button.r{color:var(--r)}input,textarea{width:100%}
-.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.k button{text-align:left;padding:12px;background:var(--c)}.k b{display:block;font-size:26px}
-table{width:100%;border-collapse:collapse}th,td{padding:7px;border-bottom:1px solid var(--b);text-align:left;vertical-align:top}th{font-size:12px;color:var(--m)}.sc{overflow-x:auto}td input,td select{min-width:70px}
-tr.s-running td{background:var(--gb)}tr.s-paused td{background:var(--yb)}tr.s-new td{background:var(--rb)}tr.s-followup td{background:var(--fb)}tr.s-completed td{background:var(--c)}
-.mh{padding:8px;border-radius:8px;margin-bottom:8px}.mh.g{background:var(--gb)}.mh.r{background:var(--rb)}.mh.x{background:var(--yb)}
-.late{color:var(--r);font-weight:600}.s{font-size:12px;color:var(--m)}.tm{font:600 14px ui-monospace,Menlo,monospace}.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.emp td:last-child{background:var(--rb)}body.mem{--p:#0f766e}.tk{border:1px solid var(--b);border-radius:10px;margin:6px 0;background:var(--c);overflow:hidden}.tk.s-running{background:var(--gb)}.tk.s-paused{background:var(--yb)}.tk.s-new{background:var(--rb)}.tk.s-followup{background:var(--fb)}.tk.s-completed{background:var(--c)}.tkh{padding:10px;cursor:pointer}.tkb{padding:10px;border-top:1px solid var(--b);display:grid;gap:8px}.pad{width:100%;min-height:60vh;resize:vertical;border:1px solid var(--b);border-radius:8px;padding:0 10px;line-height:28px;font-size:16px;background-color:var(--c);background-image:repeating-linear-gradient(transparent,transparent 27px,var(--b) 28px);background-attachment:local}.nti{font-size:18px;font-weight:600;margin:8px 0}body.adm{--p:#2563eb}.big{font-size:18px}
-#pops{position:fixed;top:10px;right:10px;left:10px;max-width:380px;margin-left:auto;z-index:20}.pop{background:var(--c);border:1px solid var(--b);border-left:4px solid var(--g);border-radius:10px;padding:10px;margin-bottom:8px;box-shadow:0 6px 20px #0004;cursor:pointer}
-.md{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:16px;z-index:30}.mb{background:var(--c);border-radius:14px;padding:16px;width:min(420px,100%);display:grid;gap:8px}
-#ts{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--t);color:var(--bg);padding:8px 14px;border-radius:99px;display:none;z-index:40;max-width:90%}
-</style></head><body><div id="pops"></div><div class="w" id="app"></div><div id="ts"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script>
-const SB_URL='https://kgswcptimmeslnosbhnb.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnc3djcHRpbW1lc2xub3NiaG5iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MDI4ODMsImV4cCI6MjEwODQ3ODg4M30.wXO8revHdkBfnCJzwt_dNymaeMaG0-3I5vH4W6qNGe0';
-const sb=supabase.createClient(SB_URL,SB_KEY);
-const $=s=>document.querySelector(s),now=()=>Date.now(),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const IST=19800000,dstr=ms=>new Date(ms+IST).toISOString().slice(0,10),tm=ms=>new Date(ms).toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit'}),fdt=s=>new Date(s).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-const p2=n=>String(n).padStart(2,'0'),fc=ms=>{const s=Math.floor(Math.abs(ms)/1000);return(s>=3600?Math.floor(s/3600)+':':'')+p2(Math.floor(s%3600/60))+':'+p2(s%60)},fm=ms=>{const m=Math.round(ms/60000);return m>=60?Math.floor(m/60)+'h '+m%60+'m':m+'m'};
-const gs=()=>{try{return+localStorage.getItem('tq_seen')||0}catch(e){return 0}},ss=n=>{try{localStorage.setItem('tq_seen',n)}catch(e){}};
-let me,P=new Map(),TK=[],LG=[],CM=[],AU=[],NT=[],RM=[],PN=[],SN=[],open=new Set(),dirty=false,sub=false,view='home',flt={},rp={from:dstr(now()),to:dstr(now()),sel:null},ne=null,grid=[],KP=[],RR=[],lt,tt;
-const nm=u=>P.get(u)?.name||'Another member',isA=()=>me&&me.role==='admin',mem=()=>[...P.values()].filter(u=>u.active),unf=u=>TK.filter(t=>t.assignee===u&&t.status!=='completed');
-const wk=t=>{let s=0;LG.forEach(l=>{if(l.task_id===t.id)s+=(l.ended_at?Date.parse(l.ended_at):now())-Date.parse(l.started_at)});return s};
-const over=t=>t.limit_min&&t.status!=='completed'&&wk(t)>t.limit_min*6e4;
-const rk=t=>!t.acked&&t.status==='new'?0:t.priority==='urgent'&&t.status==='running'?1:t.priority==='urgent'?2:t.status==='running'?3:4,srt=(x,y)=>rk(x)-rk(y)||Date.parse(y.created_at)-Date.parse(x.created_at);
-function toast(m){const e=$('#ts');e.textContent=m;e.style.display='block';clearTimeout(tt);tt=setTimeout(()=>e.style.display='none',4000)}
-function pop(b){try{if(Notification.permission==='granted')new Notification('Team Task Queue',{body:b})}catch(e){}if(navigator.vibrate)navigator.vibrate([200,100,200]);const d=document.createElement('div');d.className='pop';d.innerHTML='<b>Team Task Queue</b><div>'+esc(b)+'</div>';d.onclick=()=>{go('notif');d.remove()};$('#pops').prepend(d);setTimeout(()=>d.remove(),7000)}
-function dlg(h,ok){const m=document.createElement('div');m.className='md';m.innerHTML='<div class="mb">'+h+'<div class="row"><button class="p" id="dok">OK</button><button id="dno">Cancel</button></div></div>';document.body.appendChild(m);$('#dno').onclick=()=>m.remove();$('#dok').onclick=()=>{ok();m.remove()}}
-// ---------- auth ----------
-function login(){$('#app').innerHTML=`<div class="c" style="max-width:340px;margin:40px auto"><b style="font-size:18px">Team Task Queue</b><div class="row" style="margin-top:8px"><input id="li" placeholder="Username" autocapitalize="none"><input id="lp" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"><button class="p" onclick="doLogin()">Log in</button></div></div>`}
-async function doLogin(){const{error}=await sb.auth.signInWithPassword({email:$('#li').value.trim().toLowerCase()+'@team.app',password:$('#lp').value});if(error)return toast('Wrong username or password');boot()}
-async function logout(){await sb.auth.signOut();me=null;login()}
-async function boot(){const{data:{session}}=await sb.auth.getSession();if(!session)return login();
-const{data:p}=await sb.from('profiles').select('*').eq('id',session.user.id).single();if(!p||!p.active){await sb.auth.signOut();toast('Account inactive');return login()}
-me=p;await load();if(!sub){sub=true;sb.channel('x').on('postgres_changes',{event:'*',schema:'public'},e=>{if(e.table==='notes'&&e.new&&e.new.user_id===me.id)pop(e.new.body);clearTimeout(lt);lt=setTimeout(load,300)}).subscribe();setInterval(rt,1000);setInterval(()=>paint(),30000);addEventListener('online',load);addEventListener('offline',()=>paint());document.addEventListener('focusout',()=>{if(dirty)setTimeout(()=>{if(dirty)paint()},300)})}}
-async function load(){if(!navigator.onLine)return paint();const q=(t,o,a)=>sb.from(t).select('*').order(o,{ascending:!!a});
-const r=await Promise.all([q('profiles','name',1),q('tasks','created_at',0),q('work_log','id',1),q('comments','id',1),q('audit','id',1),q('notes','id',0),q('gap_remarks','id',1)]);
-if(r[1].error)return toast(r[1].error.message);P=new Map(r[0].data.map(x=>[x.id,x]));TK=r[1].data;LG=r[2].data;CM=r[3].data;AU=r[4].data;NT=r[5].data.filter(n=>now()-Date.parse(n.created_at)<3e5).slice(0,50);RM=r[6].data||[];paint()}
-async function rpc(n,a){if(!navigator.onLine)return toast('You are offline. Changes cannot be saved.');const{error}=await sb.rpc(n,a);if(error)toast(error.message);else await load()}
-// ---------- time logic ----------
-function dayInfo(u,d){const S=LG.filter(l=>l.user_id===u&&dstr(Date.parse(l.started_at))===d).sort((a,b)=>Date.parse(a.started_at)-Date.parse(b.started_at));if(!S.length)return null;
-const cut=Date.parse(d+'T17:00:00+05:30'),lim=dstr(now())===d?Math.min(now(),cut):cut,it=[],tk=new Set;let cur=Date.parse(S[0].started_at),W=0,E=0;
-S.forEach(l=>{const s=Date.parse(l.started_at),e=l.ended_at?Date.parse(l.ended_at):now();if(s-cur>=1000){it.push({g:1,s:cur,e:s});E+=s-cur}it.push({g:0,s,e,t:l.task_id});W+=e-s;tk.add(l.task_id);cur=Math.max(cur,e)});
-if(lim-cur>=1000){it.push({g:1,s:cur,e:lim});E+=lim-cur}return{it,W,E,first:Date.parse(S[0].started_at),last:cur,n:tk.size}}
-function absentOn(u,d){const x=P.get(u);return!!x&&x.role!=='admin'&&new Date(d+'T00:00:00Z').getUTCDay()!==0&&now()>=Date.parse(d+'T12:00:00+05:30')&&!LG.some(l=>l.user_id===u&&dstr(Date.parse(l.started_at))===d)}
-const idle=()=>mem().filter(u=>u.role!=='admin'&&!absentOn(u.id,dstr(now()))&&!TK.some(t=>t.assignee===u.id&&t.status==='running'));
-// ---------- task rows ----------
-const tog=id=>{const w=open.has(id);open.clear();if(!w)open.add(id);paint(1)};
-const det=(t,op)=>`${t.descr?'<div>'+esc(t.descr)+'</div>':''}<div class="s" style="margin-top:6px"><b>Comments</b></div>${CM.filter(c=>c.task_id===t.id).map(c=>`<div class="s">${fdt(c.created_at)} · <b>${esc(nm(c.author))}</b>: ${esc(c.body)}</div>`).join('')||'<div class="s">None</div>'}${op?`<div class="row"><input id="cm${t.id}" placeholder="Add a comment" style="flex:1"><button onclick="cmt('${t.id}')">Add</button></div>`:''}<div class="s" style="margin-top:6px"><b>History</b></div>${AU.filter(x=>x.task_id===t.id).map(x=>`<div class="s">${fdt(x.created_at)} · ${esc(nm(x.actor))} ${esc(x.action)} ${esc(x.detail)}</div>`).join('')}`;
-const cmt=async id=>{await rpc('add_comment',{p_id:id,p_body:$('#cm'+id).value});dirty=false};
-function row(t,i){const a=isA(),op=a||t.assignee===me.id,dn=t.status==='completed',ed=dn?a:(a||t.creator===me.id||t.assignee===me.id),id=t.id,o=open.has(id),st={new:'Not started',followup:'Follow-up'}[t.status]||t.status;
-const B=(l,f,c)=>`<button ${c?`class="${c}"`:''} onclick="${f}">${l}</button>`;
-const hd=`<div class="tkh" onclick="tog('${id}')"><div>${!t.acked&&t.status==='new'?'<span class="late">NEW </span>':''}${t.priority==='urgent'?'🚨 ':''}<b>${esc(t.title)}</b></div><div class="s">${esc(nm(t.assignee))} · ${st}${t.status==='followup'?' · '+(t.followup_at?fdt(t.followup_at):'time not set'):''}</div></div>`;
-if(!o)return`<div class="tk s-${t.status}">${hd}</div>`;
-const S=LG.filter(l=>l.task_id===id);
-return`<div class="tk s-${t.status}">${hd}<div class="tkb"><div><span class="s">Time worked</span> <span data-t="${id}"></span></div><div class="s">Assigned by ${esc(nm(t.creator))} · created ${fdt(t.created_at)}${t.completed_at?' · finished '+fdt(t.completed_at):''}${t.followup_note?' · note: '+esc(t.followup_note):''}</div><div class="s"><b>Start / finish times</b></div>${S.map(l=>`<div class="s">${esc(nm(l.user_id))}: ${fdt(l.started_at)} → ${l.ended_at?fdt(l.ended_at)+' ('+fm(Date.parse(l.ended_at)-Date.parse(l.started_at))+')':'running now'}</div>`).join('')||'<div class="s">Not started yet</div>'}
-<div class="row">${op&&!t.acked&&t.status==='new'?B('Seen',`rpc('ack_task',{p_id:'${id}'})`):''}${op&&!dn&&t.status!=='running'?B(t.status==='new'?'Start':'Resume',`rpc('start_task',{p_id:'${id}'})`,'p'):''}${op&&t.status==='running'?B('Pause',`rpc('pause_task',{p_id:'${id}'})`):''}${op&&!dn&&t.status!=='followup'?B('Follow-up',`fup('${id}')`):''}${op&&t.status==='followup'?B('Set time',`fup('${id}',1)`):''}${op&&!dn?B('Finish',`rpc('complete_task',{p_id:'${id}'})`):''}${ed?`<select onchange="setPri('${id}',this.value)">${['urgent','normal','low'].map(p=>`<option ${p===t.priority?'selected':''}>${p}</option>`).join('')}</select>`:''}${op&&!dn?`<select onchange="if(this.value)rpc('reassign_task',{p_id:'${id}',p_to:this.value})"><option value="">Reassign…</option>${mem().filter(u=>u.id!==t.assignee).map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select>`:''}${ed?B('Edit',`edit('${id}')`):''}${a?B('Delete',`del('${id}')`,'r'):''}</div>${det(t,op)}</div></div>`}
-const adRow=(p,to)=>`<tr><td>+</td><td><input id="${p}ti" placeholder="New task — type and press Enter" onkeydown="if(event.key==='Enter')doAdd('${p}','${to||''}')"></td><td>${to?esc(nm(to)):`<select id="${p}to">${mem().map(u=>`<option value="${u.id}" ${u.id===me.id?'selected':''}>${esc(u.name)}</option>`).join('')}</select>`}</td><td></td><td></td><td></td><td><button class="p" onclick="doAdd('${p}','${to||''}')">Assign</button></td></tr>`;
-const tbl=(l,add)=>(add?`<div class="sc"><table><tbody>${add}</tbody></table></div>`:'')+(l.map(row).join('')||'<div class="s">No tasks</div>');
-async function doAdd(p,to){const ti=$('#'+p+'ti').value.trim();if(!ti)return toast('Type a task first');await rpc('create_task',{p_title:ti,p_descr:'',p_to:to||$('#'+p+'to').value,p_pri:'normal',p_min:null});dirty=false}
-function setPri(id,p){const t=TK.find(x=>x.id===id);rpc('edit_task',{p_id:id,p_title:t.title,p_descr:t.descr||'',p_pri:p,p_min:null})}
-function edit(id){const t=TK.find(x=>x.id===id),ti=prompt('Title',t.title);if(ti===null)return;const d=prompt('Details',t.descr||'');if(d===null)return;const p=prompt('Priority: urgent / normal / low',t.priority);if(p===null)return;rpc('edit_task',{p_id:id,p_title:ti,p_descr:d,p_pri:p.trim().toLowerCase(),p_min:null})}
-function del(id){if(confirm('Permanently delete this task and all its details?'))rpc('delete_task',{p_id:id})}
-function fup(id,set){const t=TK.find(x=>x.id===id);dlg(`<b>${set?'Set follow-up time':'Follow up later'}</b><div class="s">${esc(t.title)}</div>${set?'':'<input id="fn" placeholder="Why can’t it be done now? (optional)">'}<label class="s">Follow up on (date & time, optional)</label><input id="fd" type="datetime-local">`,()=>{const v=$('#fd').value,at=v?new Date(v).toISOString():null;set?rpc('set_followup_time',{p_id:id,p_at:at}):rpc('followup_task',{p_id:id,p_at:at,p_note:$('#fn').value})})}
-// ---------- panels ----------
-function go(v,f){view=v;flt=f||{};rp.sel=null;mv=null;open.clear();if(v==='notif')ss(now());if(v==='notes')loadNotes();paint(1);scrollTo(0,0)}
-const chip=()=>Object.keys(flt).length?`<div class="s" style="margin-bottom:8px">Filter: ${esc(Object.values(flt).join(', '))} <button onclick="go(view)">Show all</button></div>`:'';
-const kgo=i=>go(KP[i][2],KP[i][3]);
-function homeP(){const urg=`<h3>🚨 Urgent tasks</h3><div class="c">${tbl(TK.filter(t=>t.priority==='urgent'&&t.status!=='completed').sort(srt))}</div>`,add=`<h3>Assign a task</h3><div class="c sc"><table><tbody>${adRow('h')}</tbody></table></div>`,K=()=>`<div class="k">${KP.map((k,i)=>`<button onclick="kgo(${i})"><span class="s">${k[0]}</span><b>${k[1]}</b></button>`).join('')}</div>`,d=dstr(now());
-if(isA()){const c=s=>TK.filter(t=>t.status===s).length;
-KP=[['Total tasks',TK.length,'tasks',{all:'all'}],['Running',c('running'),'tasks',{st:'running'}],['Paused',c('paused'),'tasks',{st:'paused'}],['Not started',c('new'),'tasks',{st:'new'}],['Follow-up',c('followup'),'tasks',{st:'followup'}],['Urgent',TK.filter(t=>t.priority==='urgent'&&t.status!=='completed').length,'tasks',{pri:'urgent'}],['Completed',c('completed'),'done',{}],['Not working',idle().length,'members',{f:'idle'}],['Absent today',mem().filter(u=>absentOn(u.id,d)).length,'members',{f:'absent'}]];
-return K()+add+urg+`<h3>Team right now</h3><div class="c">${mem().map(u=>{const r=TK.find(t=>t.assignee===u.id&&t.status==='running');return`<div class="mh ${r?'g':'r'}"><b>${esc(u.name)}</b> — ${r?'working on '+esc(r.title):'not working'}</div>`}).join('')}</div>`}
-const mine=unf(me.id).sort(srt),r=mine.find(x=>x.status==='running'),di=dayInfo(me.id,d),c=s=>mine.filter(t=>t.status===s).length;
-KP=[['Work today',fm(di?di.W:0),'report',{}],['Empty today',fm(di?di.E:0),'report',{}],['Not started',c('new'),'tasks',{st:'new'}],['Paused',c('paused'),'tasks',{st:'paused'}],['Follow-up',c('followup'),'tasks',{st:'followup'}],['Completed today',TK.filter(t=>t.status==='completed'&&t.assignee===me.id&&dstr(Date.parse(t.completed_at))===d).length,'done',{}]];
-return`<div class="c mh ${r?'g':'r'}"><div class="big">${r?'Working on: <b>'+esc(r.title)+'</b>':'You are not working on any task'}</div>${r?`<div class="tm" data-t="${r.id}"></div><div class="row" style="margin-top:6px"><button onclick="rpc('pause_task',{p_id:'${r.id}'})">Pause</button><button class="p" onclick="rpc('complete_task',{p_id:'${r.id}'})">Complete</button><button onclick="fup('${r.id}')">Follow-up</button></div>`:''}</div>`+K()+add+urg+`<h3>My tasks</h3><div class="c">${tbl(mine)}</div>`}
-function memP(){let l=mem(),d=dstr(now());if(flt.f==='idle')l=idle();if(flt.f==='absent')l=l.filter(u=>absentOn(u.id,d));
-if(mv&&P.get(mv)){const u=P.get(mv),t=unf(u.id).sort(srt),r=t.find(x=>x.status==='running');return`<div class="c"><button onclick="mv=null;paint(1)">← All members</button><div class="mh ${r?'g':'r'}" style="margin-top:8px"><b>${esc(u.name)}</b> — ${r?'working on: '+esc(r.title):t.length?'not working':'no tasks'}</div>${tbl(t,adRow('m'+u.id,u.id))}</div>`}
-return chip()+`<div class="row" style="margin-bottom:8px"><button class="p" onclick="tv='member';go('tasks')">All tasks (every member)</button></div><div class="k">${l.map(u=>{const t=unf(u.id),r=t.find(x=>x.status==='running'),ab=absentOn(u.id,d);return`<button class="mh ${r?'g':ab?'x':'r'}" onclick="mv='${u.id}';paint(1)"><b>${esc(u.name)}</b><div class="s">${r?'Working':ab?'Absent':'Not working'} · ${t.length} unfinished</div></button>`}).join('')}</div>`}
-let tv='task',DL=[],MX=null,mv=null;
-function taskP(){const l=TK.filter(t=>(flt.all||flt.st||t.status!=='completed')&&(!flt.st||t.status===flt.st)&&(!flt.pri||t.priority===flt.pri)).sort(srt);
-const tg=`<div class="row" style="margin-bottom:8px"><button class="${tv==='task'?'p':''}" onclick="tv='task';paint(1)">Task-wise</button><button class="${tv==='member'?'p':''}" onclick="tv='member';paint(1)">Member-wise</button></div>`;
-return chip()+(isA()?tg:'')+(tv==='task'||!isA()?`<div class="c">${tbl(l,adRow('t'))}</div>`:`<div class="c sc"><table><tbody>${adRow('t')}</tbody></table></div>`+mem().filter(u=>l.some(t=>t.assignee===u.id)).map(u=>`<div class="c"><b>${esc(u.name)}</b>${tbl(l.filter(t=>t.assignee===u.id))}</div>`).join(''))}
-function doneP(){const a=isA(),l=TK.filter(t=>t.status==='completed'&&(!flt.u||t.assignee===flt.u)).sort((x,y)=>Date.parse(y.completed_at)-Date.parse(x.completed_at));DL=l;
-return`<div class="c"><div class="row">${a?`<select onchange="flt.u=this.value;paint(1)"><option value="">All members</option>${mem().map(u=>`<option value="${u.id}" ${flt.u===u.id?'selected':''}>${esc(u.name)}</option>`).join('')}</select>`:''}${a&&l.length?`<button class="r" onclick="delAll()">Delete all shown (${l.length})</button>`:''}</div><div class="sc"><table><thead><tr><th>#</th><th>Task</th><th>Assigned to</th><th>Completed</th><th>Time taken</th><th></th></tr></thead><tbody>${l.map((t,i)=>`<tr style="cursor:pointer" onclick="tog('${t.id}')"><td>${i+1}</td><td><b>${esc(t.title)}</b></td><td>${esc(nm(t.assignee))}</td><td>${fdt(t.completed_at)}</td><td class="tm">${fm(wk(t))}</td><td>${a?`<button class="r" onclick="event.stopPropagation();delDone('${t.id}')">Delete</button>`:''}</td></tr>${open.has(t.id)?`<tr><td colspan="6">${det(t,false)}</td></tr>`:''}`).join('')||'<tr><td colspan="6" class="s">None yet</td></tr>'}</tbody></table></div></div>`}
-const WARN='Its work time will also disappear from time reports. Export the monthly report first. Delete?';
-function delDone(id){if(confirm(WARN))rpc('delete_task',{p_id:id})}
-async function delAll(){if(!confirm(DL.length+' completed tasks. '+WARN))return;for(const t of DL)await sb.rpc('delete_task',{p_id:t.id});await load()}
-function monP(){const m=rp.m||dstr(now()).slice(0,7),[Y,M]=m.split('-').map(Number),n=new Date(Date.UTC(Y,M,0)).getUTCDate(),us=isA()?mem():[me],DR=[];
-const S=us.map(u=>{let w=0,e=0,dw=0,ab=0;for(let i=1;i<=n;i++){const d=m+'-'+p2(i),x=dayInfo(u.id,d);if(x){w+=x.W;e+=x.E;dw++;DR.push([d,u.name,tm(x.first),tm(x.last),Math.round(x.W/6e4),Math.round(x.E/6e4),x.n])}else if(absentOn(u.id,d)){ab++;DR.push([d,u.name,'Absent','','','',''])}}return{u,w,e,dw,ab,done:TK.filter(t=>t.status==='completed'&&t.assignee===u.id&&dstr(Date.parse(t.completed_at)).startsWith(m))}});
-const CD=S.flatMap(x=>x.done.map(t=>[x.u.name,t.title,dstr(Date.parse(t.completed_at)),Math.round(wk(t)/6e4)]));MX={m,S,DR,CD};
-return`<div class="c"><div class="row"><label class="s">Month <input type="month" value="${m}" onchange="if(this.value){rp.m=this.value;paint(1)}"></label><button onclick="expM()">Download monthly CSV</button></div><div class="s">Includes member totals, day-by-day time report and completed work.</div></div><div class="c sc"><table><thead><tr><th>Member</th><th>Days worked</th><th>Absent days</th><th>Work time</th><th>Empty time</th><th>Tasks done</th></tr></thead><tbody>${S.map(x=>`<tr><td>${esc(x.u.name)}</td><td>${x.dw}</td><td>${x.ab}</td><td class="tm">${fm(x.w)}</td><td class="tm late">${fm(x.e)}</td><td>${x.done.length}</td></tr>`).join('')}</tbody></table></div><div class="c sc"><b>Completed work this month</b><table><thead><tr><th>Member</th><th>Task</th><th>Completed on</th><th>Time taken</th></tr></thead><tbody>${CD.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${r[2]}</td><td class="tm">${fm(r[3]*6e4)}</td></tr>`).join('')||'<tr><td colspan="4" class="s">None</td></tr>'}</tbody></table></div>`}
-function expM(){const{m,S,DR,CD}=MX;csv([['MONTHLY REPORT',m],[],['Member','Days worked','Absent days','Work min','Empty min','Tasks completed'],...S.map(x=>[x.u.name,x.dw,x.ab,Math.round(x.w/6e4),Math.round(x.e/6e4),x.done.length]),[],['DAILY TIME REPORT'],['Date','Member','First start','Last end','Work min','Empty min','Tasks'],...DR,[],['COMPLETED TASKS'],['Member','Task','Completed on','Minutes taken'],...CD],'monthly_report_'+m+'.csv')}
-// ---------- time report ----------
-function repRows(){const r=[],us=isA()?mem():[me];let d=rp.to,n=0;while(d>=rp.from&&n++<62){us.forEach(u=>{const i=dayInfo(u.id,d);if(i)r.push({d,u,i});else if(absentOn(u.id,d))r.push({d,u,ab:1})});d=new Date(Date.parse(d+'T00:00:00Z')-864e5).toISOString().slice(0,10)}return r}
-const rmk0=(u,s)=>RM.find(r=>r.user_id===u&&Date.parse(r.gap_start)===s);
-function rmk(u,s,e){const r=rmk0(u,s),v=prompt('Remark for this empty time (meeting, lunch, break…)',r?.remark||'');if(v===null)return;rpc('save_remark',{p_user:u,p_start:new Date(s).toISOString(),p_end:new Date(e).toISOString(),p_remark:v})}
-function repP(){if(rp.sel)return repDet();RR=repRows();
-return`<div class="c"><div class="row"><label class="s">From <input type="date" value="${rp.from}" onchange="rp.from=this.value;paint(1)"></label><label class="s">To <input type="date" value="${rp.to}" onchange="rp.to=this.value;paint(1)"></label><button onclick="exp(0)">CSV summary</button><button onclick="exp(1)">CSV detailed</button></div><div class="s" style="margin-top:6px">Day starts at first task start. Empty time = gaps between work sessions until 5 PM (after 5 PM only while working). Absent = no task started by 12 PM.</div></div><div class="c sc"><table><thead><tr><th>Date</th><th>Member</th><th>First start</th><th>Last end</th><th>Work</th><th>Empty</th><th>Tasks</th></tr></thead><tbody>${RR.map((r,i)=>`<tr style="cursor:pointer" onclick="rp.sel=${i};paint(1)"><td>${r.d}</td><td>${esc(r.u.name)}</td>${r.ab?'<td colspan="5" class="late">Absent (no task by 12 PM)</td>':`<td>${tm(r.i.first)}</td><td>${tm(r.i.last)}</td><td class="tm">${fm(r.i.W)}</td><td class="tm late">${fm(r.i.E)}</td><td>${r.i.n}</td>`}</tr>`).join('')||'<tr><td colspan="7" class="s">No data for these dates</td></tr>'}</tbody></table></div>`}
-function repDet(){const r=RR[rp.sel];if(!r){rp.sel=null;return repP()}if(r.ab)return`<div class="c"><button onclick="rp.sel=null;paint(1)">← Back</button><p>${esc(r.u.name)} was absent on ${r.d} (no task started by 12 PM).</p></div>`;
-return`<div class="c"><button onclick="rp.sel=null;paint(1)">← Back</button> <b>${esc(r.u.name)}</b> · ${r.d}</div><div class="c sc"><table><thead><tr><th>Work (tasks)</th><th>Empty time</th></tr></thead><tbody>${r.i.it.map(x=>{if(!x.g){const t=TK.find(k=>k.id===x.t);return`<tr class="s-running"><td><b>${esc(t?t.title:'Another task')}</b><div class="s">${tm(x.s)}–${tm(x.e)} · ${fm(x.e-x.s)}</div></td><td></td></tr>`}const m=rmk0(r.u.id,x.s);return`<tr class="emp"><td></td><td>${tm(x.s)}–${tm(x.e)} · <b>${fm(x.e-x.s)}</b><div>${m&&m.remark?esc(m.remark):'<span class="s">No remark</span>'}</div><button onclick="rmk('${r.u.id}',${x.s},${x.e})">Add / edit remark</button></td></tr>`}).join('')}<tr><th>Total work: ${fm(r.i.W)}</th><th>Total empty: ${fm(r.i.E)}</th></tr></tbody></table></div>`}
-function csv(rows,name){const t='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n'),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv'}));a.download=name;a.click()}
-function exp(k){const R=RR.length?RR:repRows(),h=k?[['Date','Member','Type','Task','Start','End','Minutes','Remark']]:[['Date','Member','First start','Last end','Work min','Empty min','Tasks','Absent']],o=[];
-R.forEach(r=>{if(!k)o.push(r.ab?[r.d,r.u.name,'','','','','','Yes']:[r.d,r.u.name,tm(r.i.first),tm(r.i.last),Math.round(r.i.W/6e4),Math.round(r.i.E/6e4),r.i.n,'No']);else if(r.ab)o.push([r.d,r.u.name,'Absent','','','','','']);else r.i.it.forEach(x=>{const t=TK.find(z=>z.id===x.t),m=rmk0(r.u.id,x.s);o.push([r.d,r.u.name,x.g?'Empty':'Work',x.g?'':(t?t.title:'Another task'),tm(x.s),tm(x.e),Math.round((x.e-x.s)/6e4),x.g&&m?m.remark:''])})});csv(h.concat(o),(k?'time_detail_':'time_summary_')+rp.from+'_'+rp.to+'.csv')}
-// ---------- notes ----------
-let nq='',nsave,pend=null;
-async function loadNotes(){const[a,b]=await Promise.all([sb.from('personal_notes').select('*').order('updated_at',{ascending:false}),sb.from('shared_notes').select('*').order('updated_at',{ascending:false})]);if(a.error)toast(a.error.message);PN=a.data||[];SN=b.data||[];if(view==='notes')paint(1)}
-function nLists(){const q=nq.toLowerCase(),L=(a,k)=>a.filter(n=>((n.title||'')+(n.body||'')).toLowerCase().includes(q)).map(n=>`<div class="rw" style="cursor:pointer" onclick="nOpen('${k}',${n.id})"><div class="row" style="justify-content:space-between"><b>${esc(n.title)}</b><button class="r" onclick="event.stopPropagation();nDel('${k}',${n.id})">Delete</button></div><div class="s">${fdt(n.updated_at)}</div><div class="s">${esc((n.body||'').slice(0,90))}</div></div>`).join('')||'<div class="s">Nothing here</div>';
-return`<div class="c"><div class="row" style="justify-content:space-between"><b>My private notes</b><button class="p" onclick="nNew('p')">+ New note</button></div><div class="s">Only you can see these</div>${L(PN,'p')}</div><div class="c"><div class="row" style="justify-content:space-between"><b>Shared notes</b><button class="p" onclick="nNew('s')">+ New note</button></div><div class="s">Everyone can open and edit</div>${L(SN,'s')}</div>`}
-const nL=()=>{$('#nl').innerHTML=nLists()};
-const notesP=()=>`<div class="c"><input placeholder="Search notes…" value="${esc(nq)}" oninput="nq=this.value;nL()"></div><div id="nl">${nLists()}</div>`;
-async function nNew(k){const r=await sb.from(k==='p'?'personal_notes':'shared_notes').insert(k==='p'?{user_id:me.id,title:'Untitled note'}:{title:'Untitled note',updated_by:me.id}).select().single();if(r.error)return toast(r.error.message);ne=r.data;view=k==='p'?'pn':'sn';paint(1)}
-function nOpen(k,id){ne=(k==='p'?PN:SN).find(x=>x.id===id);view=k==='p'?'pn':'sn';paint(1)}
-async function nDel(k,id){if(!confirm('Delete this note permanently?'))return;const r=await sb.from(k==='p'?'personal_notes':'shared_notes').delete().eq('id',id);if(r.error)toast(r.error.message);loadNotes()}
-const edP=()=>`<div class="c"><div class="row"><button onclick="nBack()">← Back</button><span class="s" id="ns">${view==='sn'?'Shared — everyone can edit':'Private — only you'}</span></div><input id="nt" class="nti" value="${esc(ne.title)}" oninput="nAuto()"><textarea id="nb" class="pad" oninput="nAuto()" placeholder="Start writing…">${esc(ne.body||'')}</textarea><div class="s" id="nw"></div></div>`;
-function wc(){const b=$('#nb'),w=$('#nw');if(b&&w)w.textContent=(b.value.trim().split(/\s+/).filter(Boolean).length)+' words'}
-function nAuto(){pend={v:view,id:ne.id,t:$('#nt').value,b:$('#nb').value};ne.title=pend.t;ne.body=pend.b;$('#ns').textContent='Saving…';clearTimeout(nsave);nsave=setTimeout(nSave,1000);wc()}
-async function nSave(){if(!pend)return;const p=pend;pend=null;const o={title:p.t,body:p.b,updated_at:new Date().toISOString()};if(p.v==='sn')o.updated_by=me.id;const r=await sb.from(p.v==='sn'?'shared_notes':'personal_notes').update(o).eq('id',p.id),e=$('#ns');if(r.error)toast(r.error.message);if(e)e.textContent=r.error?'Not saved':'Saved ✓'}
-async function nBack(){clearTimeout(nsave);await nSave();go('notes')}
-// ---------- notifications ----------
-function warns(){const w=[],d=dstr(now());if(isA())mem().forEach(u=>{if(u.role==='admin')return;const l=unf(u.id);if(absentOn(u.id,d))w.push('🚫 '+u.name+' is absent (no task by 12 PM)');else if(!l.some(x=>x.status==='running'))w.push(l.length?'⚠️ '+u.name+' is not working on any task ('+l.length+' pending)':'📭 '+u.name+' has no tasks assigned')});
-else{const l=unf(me.id);if(!l.length)w.push('📭 No tasks assigned to you');else if(!l.some(x=>x.status==='running'))w.push('⚠️ You are not working on any task')}
-TK.filter(t=>t.status!=='completed').forEach(t=>{if(t.priority==='urgent')w.push('🚨 Urgent: '+t.title+' ('+nm(t.assignee)+')');if(over(t))w.push('⛔ Overdue: '+t.title+' ('+nm(t.assignee)+')');if(t.status==='followup'&&t.followup_at&&Date.parse(t.followup_at)<=now())w.push('🔁 Follow-up due: '+t.title+' ('+nm(t.assignee)+')')});return w}
-const notifP=()=>`<div class="c"><b>Needs attention now</b>${warns().map(x=>`<div class="rw">${esc(x)}</div>`).join('')||'<div class="s">All clear</div>'}</div><div class="c"><b>Recent notifications</b>${NT.map(n=>`<div class="rw"><div>${esc(n.body)}</div><div class="s">${fdt(n.created_at)}</div></div>`).join('')||'<div class="s">None</div>'}</div>`;
-// ---------- paint ----------
-function paint(force){if(!me)return;const ae=document.activeElement;if(!force&&(view==='pn'||view==='sn'))return;
-if(!force&&ae&&/INPUT|TEXTAREA/.test(ae.tagName)&&ae.value&&$('#app').contains(ae)){dirty=true;return}dirty=false;
-const un=NT.filter(n=>Date.parse(n.created_at)>gs()).length,B=['notif','🔔'+(un?' '+un:'')],T=isA()?[['home','Home'],['members','All Members'],['tasks','All Tasks'],['done','Completed'],['report','Time Report'],['month','Monthly Report'],['notes','Notes'],B]:[['home','My Work'],['tasks','All Tasks'],['done','Completed'],['report','My Time'],['month','Monthly'],['notes','Notes'],B],on=['pn','sn'].includes(view)?'notes':view;
-document.body.className=isA()?'adm':'mem';const P0={month:monP,home:homeP,members:memP,tasks:taskP,done:doneP,report:repP,notes:notesP,pn:edP,sn:edP,notif:notifP};
-$('#app').innerHTML=`<div class="top"><b style="font-size:18px">${isA()?'Team Task Queue':'My Workspace'}</b><div class="s"><span style="color:${navigator.onLine?'var(--g)':'var(--r)'}">●</span> <b>${esc(me.name)}</b> <button onclick="Notification.requestPermission().then(p=>toast('Alerts: '+p))">Alerts</button> <button onclick="logout()">Log out</button></div></div><nav>${T.map(t=>`<button class="${t[0]===on?'on':''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('')}</nav><div id="main">${(P0[view]||homeP)()}</div>`;rt();if(view==='pn'||view==='sn')wc()}
-function rt(){document.querySelectorAll('[data-t]').forEach(e=>{const t=TK.find(x=>x.id===e.dataset.t);if(!t)return;const w=wk(t);e.textContent=fc(w);e.className='tm'+(over(t)?' late':'')})}
-boot();
-</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskQueue - Team Operations & Task Dispatch</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains+Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-200">
+
+  <div id="app" class="min-h-screen flex flex-col"></div>
+
+  <script>
+    const SUPABASE_URL = "https://kgswcptimmeslnosbhnb.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnc3djcHRpbW1lc2xub3NiaG5iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MDI4ODMsImV4cCI6MjEwODQ3ODg4M30.wXO8revHdkBfnCJzwt_dNymaeMaG0-3I5vH4W6qNGe0";
+    const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+    // Theme Management: Light, Dark, and System preference
+    let currentThemeMode = localStorage.getItem('taskqueue_theme') || 'system';
+
+    function applyTheme() {
+      if (currentThemeMode === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else if (currentThemeMode === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    }
+
+    function setThemeMode(mode) {
+      currentThemeMode = mode;
+      localStorage.setItem('taskqueue_theme', mode);
+      applyTheme();
+      renderApp();
+    }
+
+    function toggleThemeQuick() {
+      const isDark = document.documentElement.classList.contains('dark');
+      setThemeMode(isDark ? 'light' : 'dark');
+    }
+
+    applyTheme();
+
+    let currentUser = null;
+    let profiles = [];
+    let tasks = [];
+    let workLogs = [];
+    let comments = [];
+    let paymentSheet = [];
+    let selectedTaskIds = new Set();
+    let currentFilter = 'front';
+    let selectedMemberId = null;
+    let inspectingTaskId = null;
+    let showPaymentModal = false;
+    let authMode = 'login';
+    let authError = '';
+
+    function getISTString() {
+      return new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    }
+
+    function formatDuration(totalSeconds) {
+      if (!totalSeconds || totalSeconds < 0) return '00:00:00';
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = Math.floor(totalSeconds % 60);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function getTaskDuration(taskId) {
+      const logs = workLogs.filter(l => String(l.task_id) === String(taskId));
+      let sec = 0;
+      const now = Date.now();
+      logs.forEach(l => {
+        const start = new Date(l.started_at).getTime();
+        const end = l.ended_at ? new Date(l.ended_at).getTime() : now;
+        sec += Math.max(0, Math.floor((end - start) / 1000));
+      });
+      return sec;
+    }
+
+    function getUserWorkTimeToday(userId) {
+      const now = new Date();
+      const istNowStr = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+      const istDate = new Date(istNowStr);
+      istDate.setHours(0, 0, 0, 0);
+      const dayStart = istDate.getTime();
+
+      const userLogs = workLogs.filter(l => String(l.user_id) === String(userId));
+      let sec = 0;
+      const curTime = Date.now();
+      userLogs.forEach(l => {
+        const start = new Date(l.started_at).getTime();
+        const end = l.ended_at ? new Date(l.ended_at).getTime() : curTime;
+        if (end > dayStart) {
+          const effectiveStart = Math.max(start, dayStart);
+          sec += Math.max(0, Math.floor((end - effectiveStart) / 1000));
+        }
+      });
+      return sec;
+    }
+
+    async function loadData() {
+      try {
+        if (!supabase) return;
+        const [pRes, tRes, wRes, cRes, payRes] = await Promise.all([
+          supabase.from('profiles').select('*').order('name'),
+          supabase.from('tasks').select('*').order('created_at', { ascending: false }),
+          supabase.from('work_log').select('*'),
+          supabase.from('comments').select('*').order('created_at', { ascending: true }),
+          supabase.from('payment_sheet').select('*').order('created_at', { ascending: false })
+        ]);
+
+        if (pRes.data) profiles = pRes.data;
+        if (tRes.data) tasks = tRes.data;
+        if (wRes.data) workLogs = wRes.data;
+        if (cRes.data) comments = cRes.data;
+        if (payRes.data) paymentSheet = payRes.data;
+
+        const savedUserId = localStorage.getItem('taskqueue_user_id');
+        if (savedUserId && !currentUser) {
+          currentUser = profiles.find(p => String(p.id) === String(savedUserId)) || profiles[0] || null;
+        }
+      } catch (err) {
+        console.error("Error loading data:", err);
+      }
+      renderApp();
+    }
+
+    async function loginUser(username, password) {
+      authError = '';
+      const email = username.includes('@') ? username : `${username.toLowerCase()}@team.app`;
+      try {
+        if (supabase) {
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) {
+            const p = profiles.find(x => x.name.toLowerCase() === username.toLowerCase() || String(x.id).toLowerCase() === username.toLowerCase());
+            if (p) {
+              currentUser = p;
+              localStorage.setItem('taskqueue_user_id', p.id);
+              renderApp();
+              return;
+            }
+            authError = error.message;
+            renderApp();
+            return;
+          }
+          if (data?.user) {
+            const p = profiles.find(x => String(x.id) === String(data.user.id) || x.name.toLowerCase() === username.toLowerCase()) || {
+              id: data.user.id,
+              name: username,
+              role: 'member'
+            };
+            currentUser = p;
+            localStorage.setItem('taskqueue_user_id', p.id);
+            renderApp();
+          }
+        }
+      } catch (err) {
+        authError = err.message || 'Login failed';
+        renderApp();
+      }
+    }
+
+    async function signupUser(username, password, role = 'member') {
+      authError = '';
+      const email = username.includes('@') ? username : `${username.toLowerCase()}@team.app`;
+      try {
+        if (supabase) {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { username, role } }
+          });
+          if (error) {
+            authError = error.message;
+            renderApp();
+            return;
+          }
+          const newId = data?.user?.id || `user_${Date.now()}`;
+          const newProfile = { id: newId, name: username, role, active: true };
+          await supabase.from('profiles').upsert(newProfile);
+          profiles.push(newProfile);
+          currentUser = newProfile;
+          localStorage.setItem('taskqueue_user_id', newId);
+          renderApp();
+        }
+      } catch (err) {
+        authError = err.message || 'Signup failed';
+        renderApp();
+      }
+    }
+
+    function logout() {
+      if (supabase) supabase.auth.signOut();
+      currentUser = null;
+      localStorage.removeItem('taskqueue_user_id');
+      selectedTaskIds.clear();
+      renderApp();
+    }
+
+    // Single-Task Timer & Auto-Pause
+    async function startTask(taskId) {
+      if (!currentUser) return;
+      const nowISO = new Date().toISOString();
+      const task = tasks.find(t => String(t.id) === String(taskId));
+      if (!task) return;
+
+      const targetUserId = task.assignee || currentUser.id;
+
+      // 1. Pause other running tasks for this user
+      const runningTasks = tasks.filter(t => String(t.assignee) === String(targetUserId) && t.status === 'running' && String(t.id) !== String(taskId));
+      for (const t of runningTasks) {
+        t.status = 'new';
+        if (supabase) await supabase.from('tasks').update({ status: 'new' }).eq('id', t.id);
+      }
+
+      // 2. Stop running work logs for this user
+      workLogs.forEach(log => {
+        if (String(log.user_id) === String(targetUserId) && !log.ended_at) {
+          log.ended_at = nowISO;
+          if (supabase) supabase.from('work_log').update({ ended_at: nowISO }).eq('id', log.id);
+        }
+      });
+
+      // 3. Start task & open log
+      task.status = 'running';
+      const newLog = {
+        id: `wl_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        task_id: String(taskId),
+        user_id: String(targetUserId),
+        started_at: nowISO,
+        ended_at: null
+      };
+      workLogs.push(newLog);
+
+      if (supabase) {
+        await supabase.from('tasks').update({ status: 'running' }).eq('id', taskId);
+        await supabase.from('work_log').insert(newLog);
+      }
+      renderApp();
+    }
+
+    async function pauseTask(taskId) {
+      const nowISO = new Date().toISOString();
+      const task = tasks.find(t => String(t.id) === String(taskId));
+      if (!task) return;
+
+      task.status = 'new';
+      workLogs.forEach(l => {
+        if (String(l.task_id) === String(taskId) && !l.ended_at) {
+          l.ended_at = nowISO;
+          if (supabase) supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id);
+        }
+      });
+
+      if (supabase) await supabase.from('tasks').update({ status: 'new' }).eq('id', taskId);
+      renderApp();
+    }
+
+    async function completeTask(taskId) {
+      const nowISO = new Date().toISOString();
+      const task = tasks.find(t => String(t.id) === String(taskId));
+      if (!task) return;
+
+      task.status = 'completed';
+      task.completed_at = nowISO;
+      workLogs.forEach(l => {
+        if (String(l.task_id) === String(taskId) && !l.ended_at) {
+          l.ended_at = nowISO;
+          if (supabase) supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id);
+        }
+      });
+
+      if (supabase) await supabase.from('tasks').update({ status: 'completed', completed_at: nowISO }).eq('id', taskId);
+      renderApp();
+    }
+
+    async function setFollowupTask(taskId) {
+      const nowISO = new Date().toISOString();
+      const task = tasks.find(t => String(t.id) === String(taskId));
+      if (!task) return;
+
+      task.status = 'followup';
+      task.followup_at = nowISO;
+      workLogs.forEach(l => {
+        if (String(l.task_id) === String(taskId) && !l.ended_at) {
+          l.ended_at = nowISO;
+          if (supabase) supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id);
+        }
+      });
+
+      if (supabase) await supabase.from('tasks').update({ status: 'followup', followup_at: nowISO }).eq('id', taskId);
+      renderApp();
+    }
+
+    async function createTask(title, assignee, priority = 'normal', limit_min = null) {
+      if (!title || !title.trim() || !currentUser) return;
+      const newTask = {
+        id: `t_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        title: title.trim(),
+        status: 'new',
+        priority,
+        assignee: assignee || currentUser.id,
+        creator: currentUser.id,
+        limit_min: limit_min ? parseInt(limit_min, 10) : null,
+        created_at: new Date().toISOString(),
+        completed_at: null,
+        acked: false
+      };
+      tasks.unshift(newTask);
+      if (supabase) await supabase.from('tasks').insert(newTask);
+      renderApp();
+    }
+
+    // Bulk actions
+    async function bulkDeleteSelected() {
+      if (selectedTaskIds.size === 0) return;
+      if (!confirm(`Are you sure you want to delete ${selectedTaskIds.size} task(s)?`)) return;
+      const idsToDelete = Array.from(selectedTaskIds);
+      tasks = tasks.filter(t => !selectedTaskIds.has(String(t.id)));
+      workLogs = workLogs.filter(w => !selectedTaskIds.has(String(w.task_id)));
+      selectedTaskIds.clear();
+      if (supabase) await supabase.from('tasks').delete().in('id', idsToDelete);
+      renderApp();
+    }
+
+    async function bulkAssignSelected(newAssigneeId) {
+      if (selectedTaskIds.size === 0 || !newAssigneeId) return;
+      const ids = Array.from(selectedTaskIds);
+      tasks.forEach(t => {
+        if (selectedTaskIds.has(String(t.id))) t.assignee = newAssigneeId;
+      });
+      selectedTaskIds.clear();
+      if (supabase) await supabase.from('tasks').update({ assignee: newAssigneeId }).in('id', ids);
+      renderApp();
+    }
+
+    async function bulkSetSection(newStatus) {
+      if (selectedTaskIds.size === 0) return;
+      const ids = Array.from(selectedTaskIds);
+      const nowISO = new Date().toISOString();
+      tasks.forEach(t => {
+        if (selectedTaskIds.has(String(t.id))) {
+          t.status = newStatus;
+          if (newStatus === 'completed') t.completed_at = nowISO;
+          if (newStatus === 'followup') t.followup_at = nowISO;
+          if (newStatus !== 'running') {
+            workLogs.forEach(l => {
+              if (String(l.task_id) === String(t.id) && !l.ended_at) l.ended_at = nowISO;
+            });
+          }
+        }
+      });
+      selectedTaskIds.clear();
+      if (supabase) {
+        await supabase.from('tasks').update({
+          status: newStatus,
+          completed_at: newStatus === 'completed' ? nowISO : null
+        }).in('id', ids);
+      }
+      renderApp();
+    }
+
+    // Payment Sheet
+    async function addPaymentEntry(taskName, amount, notes = '') {
+      if (!taskName || !currentUser) return;
+      const entry = {
+        id: `pay_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        user_id: String(currentUser.id),
+        task_name: taskName.trim(),
+        amount: parseFloat(amount) || 0,
+        notes: notes.trim(),
+        created_at: new Date().toISOString()
+      };
+      paymentSheet.unshift(entry);
+      if (supabase) await supabase.from('payment_sheet').insert(entry);
+      renderApp();
+    }
+
+    async function deletePaymentEntry(id) {
+      paymentSheet = paymentSheet.filter(p => String(p.id) !== String(id));
+      if (supabase) await supabase.from('payment_sheet').delete().eq('id', id);
+      renderApp();
+    }
+
+    function exportPaymentCSV() {
+      const rows = [
+        ['Date', 'Task Name', 'Amount (INR)', 'Notes'],
+        ...paymentSheet.map(p => [
+          new Date(p.created_at).toLocaleDateString('en-IN'),
+          `"${p.task_name.replace(/"/g, '""')}"`,
+          p.amount,
+          `"${(p.notes || '').replace(/"/g, '""')}"`
+        ])
+      ];
+      const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `TaskQueue_Payment_Sheet_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // 1-second live timer tick
+    setInterval(() => {
+      const activeLogs = workLogs.filter(w => !w.ended_at);
+      if (activeLogs.length > 0) {
+        document.querySelectorAll('[data-timer-task-id]').forEach(el => {
+          const tid = el.getAttribute('data-timer-task-id');
+          el.textContent = formatDuration(getTaskDuration(tid));
+        });
+        const liveClock = document.getElementById('ist-live-clock');
+        if (liveClock) liveClock.textContent = getISTString();
+      }
+    }, 1000);
+
+    function renderApp() {
+      const app = document.getElementById('app');
+      if (!app) return;
+
+      if (!currentUser) {
+        app.innerHTML = renderAuthScreen();
+        lucide.createIcons();
+        return;
+      }
+
+      const isAdmin = currentUser.role === 'admin';
+      let baseTasks = tasks;
+      if (!isAdmin && currentFilter !== 'all_team') {
+        baseTasks = tasks.filter(t => String(t.assignee) === String(currentUser.id));
+      }
+
+      const incompleteTasks = baseTasks.filter(t => t.status !== 'completed');
+      const liveTasks = baseTasks.filter(t => t.status === 'running');
+      const urgentTasks = baseTasks.filter(t => t.priority === 'urgent' && t.status !== 'completed');
+      const followupTasks = baseTasks.filter(t => t.status === 'followup');
+      const completedTasks = baseTasks.filter(t => t.status === 'completed');
+
+      let displayedTasks = [];
+      if (currentFilter === 'front') {
+        const liveIds = new Set(liveTasks.map(t => String(t.id)));
+        const urgentNotLive = urgentTasks.filter(t => !liveIds.has(String(t.id)));
+        displayedTasks = [...liveTasks, ...urgentNotLive];
+      } else if (currentFilter === 'total') displayedTasks = incompleteTasks;
+      else if (currentFilter === 'live') displayedTasks = liveTasks;
+      else if (currentFilter === 'urgent') displayedTasks = urgentTasks;
+      else if (currentFilter === 'followup') displayedTasks = followupTasks;
+      else if (currentFilter === 'completed') displayedTasks = completedTasks;
+      else if (currentFilter === 'all_team') displayedTasks = tasks.filter(t => t.status !== 'completed');
+      else if (currentFilter === 'members' && selectedMemberId) displayedTasks = tasks.filter(t => String(t.assignee) === String(selectedMemberId) && t.status !== 'completed');
+      else displayedTasks = incompleteTasks;
+
+      const allDisplayedSelected = displayedTasks.length > 0 && displayedTasks.every(t => selectedTaskIds.has(String(t.id)));
+
+      app.innerHTML = `
+        <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-xs">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/20">
+                  <i data-lucide="layers" class="w-5 h-5"></i>
+                </div>
+                <div class="leading-tight">
+                  <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">TaskQueue</span>
+                </div>
+              </div>
+              <div class="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-mono text-slate-600 dark:text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>IST:</span>
+                <span id="ist-live-clock" class="font-semibold text-slate-900 dark:text-slate-200">${getISTString()}</span>
+              </div>
+            </div>
+
+            <!-- Header Actions: Payment Sheet, Theme Switcher, Name Only -->
+            <div class="flex items-center gap-2 sm:gap-3">
+              <button onclick="openPaymentSheet()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold border border-emerald-200 dark:border-emerald-800 transition">
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+                <span>Payment Sheet</span>
+              </button>
+
+              <!-- Light & Dark Theme Preference Switcher -->
+              <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                <button onclick="setThemeMode('light')" title="Light Theme" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'light' ? 'bg-white text-amber-600 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                  <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="setThemeMode('dark')" title="Dark Theme" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'dark' ? 'bg-slate-700 text-indigo-400 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                  <i data-lucide="moon" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="setThemeMode('system')" title="System Theme" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'system' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                  <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+
+              <!-- Name Only Display (No Role Label) -->
+              <div class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+                <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-xs uppercase">
+                  ${(currentUser.name || 'U').slice(0, 2)}
+                </div>
+                <div class="text-left hidden sm:block">
+                  <div class="text-xs font-bold text-slate-900 dark:text-slate-100 leading-none">${currentUser.name}</div>
+                  <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                    ${formatDuration(getUserWorkTimeToday(currentUser.id))} today
+                  </div>
+                </div>
+                <button onclick="logout()" title="Logout" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-md transition">
+                  <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
+          <!-- Fast 1-row Dispatch -->
+          <div class="mb-6 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <form id="fast-dispatch-form" onsubmit="handleFastDispatch(event)" class="flex flex-col sm:flex-row items-center gap-2.5">
+              <div class="relative flex-1 w-full">
+                <i data-lucide="plus-circle" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input id="dispatch-title" type="text" placeholder="Type new task name & press Enter..." required
+                  class="w-full pl-9 pr-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100" />
+              </div>
+
+              <select id="dispatch-assignee" class="w-full sm:w-44 py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                ${profiles.map(p => `
+                  <option value="${p.id}" ${String(p.id) === String(currentUser.id) ? 'selected' : ''}>${p.name}</option>
+                `).join('')}
+              </select>
+
+              <input id="dispatch-budget" type="number" min="1" placeholder="Mins budget (opt)"
+                class="w-full sm:w-32 py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200" />
+
+              <button type="button" id="dispatch-priority-btn" onclick="toggleDispatchPriority()"
+                class="w-full sm:w-auto px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100">
+                Normal
+              </button>
+              <input type="hidden" id="dispatch-priority" value="normal" />
+
+              <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                <span>Dispatch</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- KPI Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            <button onclick="setTab('front')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'front' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-400'}">
+              <div class="flex items-center justify-between text-xs font-semibold opacity-90">
+                <span>Front Panel</span>
+                <i data-lucide="layout-grid" class="w-4 h-4"></i>
+              </div>
+              <div class="text-2xl font-black mt-2 leading-none">${liveTasks.length + urgentTasks.filter(u => u.status !== 'running').length}</div>
+              <div class="text-[10px] mt-1 opacity-75">Live & Urgent only</div>
+            </button>
+
+            <button onclick="setTab('total')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'total' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-400'}">
+              <div class="flex items-center justify-between text-xs font-semibold opacity-90">
+                <span>Total Tasks</span>
+                <i data-lucide="check-square" class="w-4 h-4"></i>
+              </div>
+              <div class="text-2xl font-black mt-2 leading-none">${incompleteTasks.length}</div>
+              <div class="text-[10px] mt-1 opacity-75">Incomplete only</div>
+            </button>
+
+            <button onclick="setTab('live')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'live' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-400'}">
+              <div class="flex items-center justify-between text-xs font-semibold opacity-90">
+                <span>Live Tasks</span>
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              </div>
+              <div class="text-2xl font-black mt-2 leading-none text-emerald-500 ${currentFilter === 'live' ? '!text-white' : ''}">${liveTasks.length}</div>
+              <div class="text-[10px] mt-1 opacity-75">Active & Running</div>
+            </button>
+
+            <button onclick="setTab('urgent')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'urgent' ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400'}">
+              <div class="flex items-center justify-between text-xs font-semibold opacity-90">
+                <span>Urgent</span>
+                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+              </div>
+              <div class="text-2xl font-black mt-2 leading-none text-rose-500 ${currentFilter === 'urgent' ? '!text-white' : ''}">${urgentTasks.length}</div>
+              <div class="text-[10px] mt-1 opacity-75">High Priority</div>
+            </button>
+
+            <button onclick="setTab('followup')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'followup' ? 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-amber-400'}">
+              <div class="flex items-center justify-between text-xs font-semibold opacity-90">
+                <span>Follow-up</span>
+                <i data-lucide="clock" class="w-4 h-4"></i>
+              </div>
+              <div class="text-2xl font-black mt-2 leading-none text-amber-500 ${currentFilter === 'followup' ? '!text-white' : ''}">${followupTasks.length}</div>
+              <div class="text-[10px] mt-1 opacity-75">Needs Follow-up</div>
+            </button>
+
+            <button onclick="setTab('completed')" class="p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${currentFilter === 'completed' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-400'}">
+              <div class="flex items-center justify-between text-xs font-semibold opacity-90">
+                <span>Completed</span>
+                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+              </div>
+              <div class="text-2xl font-black mt-2 leading-none">${completedTasks.length}</div>
+              <div class="text-[10px] mt-1 opacity-75">Finished Archive</div>
+            </button>
+          </div>
+
+          <!-- Admin Members Section -->
+          ${isAdmin ? `
+            <div class="mb-6 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Team Working Hours Today</span>
+                <span class="text-xs text-slate-500 font-mono">${profiles.length} team members</span>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                ${profiles.map(p => {
+                  const pWorkSec = getUserWorkTimeToday(p.id);
+                  const pIncomplete = tasks.filter(t => String(t.assignee) === String(p.id) && t.status !== 'completed').length;
+                  const isSelected = selectedMemberId === p.id;
+                  return `
+                    <button onclick="filterByMember('${p.id}')" class="p-2.5 rounded-lg border text-left transition ${isSelected ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'}">
+                      <div class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">${p.name}</div>
+                      <div class="flex items-center justify-between mt-1 text-[11px] font-mono">
+                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">${formatDuration(pWorkSec)}</span>
+                        <span class="text-slate-500">${pIncomplete} active</span>
+                      </div>
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Task Rows -->
+          <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+            <div class="px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <input type="checkbox" onchange="toggleSelectAll(this.checked)" ${allDisplayedSelected ? 'checked' : ''}
+                  class="w-4 h-4 rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  ${currentFilter === 'front' ? 'Front Panel (Live & Urgent)' :
+                    currentFilter === 'total' ? 'Total Incomplete Tasks' :
+                    currentFilter === 'all_team' ? 'All Team Assigned Tasks' :
+                    currentFilter.toUpperCase() + ' TASKS'} (${displayedTasks.length})
+                </span>
+              </div>
+              <div class="text-xs text-slate-500 font-mono">Click task for details</div>
+            </div>
+
+            ${displayedTasks.length === 0 ? `
+              <div class="py-12 text-center text-slate-400">
+                <i data-lucide="check-circle" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                <div class="text-sm font-medium">No tasks found in this section</div>
+              </div>
+            ` : `
+              <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                ${displayedTasks.map(task => {
+                  const isChecked = selectedTaskIds.has(String(task.id));
+                  const isRunning = task.status === 'running';
+                  const assigneeName = (profiles.find(p => String(p.id) === String(task.assignee)) || {}).name || 'Unassigned';
+                  const durationSec = getTaskDuration(task.id);
+
+                  return `
+                    <div class="flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition cursor-pointer group ${isChecked ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : ''}"
+                         onclick="openTaskDetail('${task.id}')">
+                      <div class="flex items-center gap-3 min-w-0 flex-1 pr-4" onclick="event.stopPropagation()">
+                        <input type="checkbox" onchange="toggleSelectTask('${task.id}', this.checked)" ${isChecked ? 'checked' : ''}
+                          class="w-4 h-4 rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+
+                        <!-- Task Name Only for Member; Task Name + Assigned For Admin -->
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-2">
+                            ${task.priority === 'urgent' ? `
+                              <span class="px-1.5 py-0.5 rounded-sm bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 text-[10px] font-bold">URGENT</span>
+                            ` : ''}
+                            <span class="text-sm font-medium text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
+                              ${task.title}
+                            </span>
+                          </div>
+                        </div>
+
+                        ${isAdmin ? `
+                          <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">
+                            <i data-lucide="user" class="w-3 h-3 text-slate-400"></i>
+                            <span>${assigneeName}</span>
+                          </div>
+                        ` : ''}
+                      </div>
+
+                      <div class="flex items-center gap-3 shrink-0" onclick="event.stopPropagation()">
+                        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-semibold ${isRunning ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}">
+                          ${isRunning ? `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>` : ''}
+                          <span data-timer-task-id="${task.id}">${formatDuration(durationSec)}</span>
+                        </div>
+
+                        ${isRunning ? `
+                          <button onclick="pauseTask('${task.id}')" title="Pause Task" class="p-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white transition">
+                            <i data-lucide="pause" class="w-4 h-4"></i>
+                          </button>
+                        ` : task.status !== 'completed' ? `
+                          <button onclick="startTask('${task.id}')" title="Start Task" class="p-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white transition">
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                          </button>
+                        ` : `
+                          <span class="text-xs text-slate-400 font-semibold px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded">Done</span>
+                        `}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+
+          <div class="mt-6 flex justify-center">
+            <button onclick="setTab('all_team')" class="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-xs shadow-xs transition">
+              <i data-lucide="users" class="w-4 h-4 text-indigo-500"></i>
+              <span>View All Assigned Team Tasks (Excluding Completed)</span>
+            </button>
+          </div>
+        </main>
+
+        <!-- Floating Bulk Bar -->
+        ${selectedTaskIds.size > 0 ? `
+          <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white dark:bg-slate-800 rounded-2xl shadow-2xl px-5 py-3.5 flex flex-wrap items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-4">
+            <div class="text-xs font-bold text-indigo-300 pr-2 border-r border-slate-700">
+              ${selectedTaskIds.size} Selected
+            </div>
+
+            <select onchange="bulkAssignSelected(this.value)" class="text-xs py-1.5 px-2.5 rounded-lg bg-slate-800 dark:bg-slate-700 border border-slate-600 text-white focus:outline-hidden">
+              <option value="">Reassign to...</option>
+              ${profiles.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+            </select>
+
+            <div class="flex items-center gap-1.5">
+              <button onclick="bulkSetSection('new')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg font-medium transition">
+                Pause / Reset
+              </button>
+              <button onclick="bulkSetSection('followup')" class="px-2.5 py-1.5 bg-amber-600/80 hover:bg-amber-600 text-xs rounded-lg font-medium transition">
+                Follow-up
+              </button>
+              <button onclick="bulkSetSection('completed')" class="px-2.5 py-1.5 bg-emerald-600/80 hover:bg-emerald-600 text-xs rounded-lg font-medium transition">
+                Complete
+              </button>
+            </div>
+
+            <button onclick="bulkDeleteSelected()" class="p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition" title="Delete Selected">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+
+            <button onclick="clearSelection()" class="text-slate-400 hover:text-white text-xs underline pl-2">
+              Cancel
+            </button>
+          </div>
+        ` : ''}
+
+        ${showPaymentModal ? renderPaymentModal() : ''}
+        ${inspectingTaskId ? renderTaskDetailModal(inspectingTaskId) : ''}
+      `;
+
+      lucide.createIcons();
+    }
+
+    function setTab(tab) {
+      currentFilter = tab;
+      selectedMemberId = null;
+      renderApp();
+    }
+
+    function filterByMember(memId) {
+      currentFilter = 'members';
+      selectedMemberId = memId;
+      renderApp();
+    }
+
+    function toggleSelectTask(id, checked) {
+      if (checked) selectedTaskIds.add(String(id));
+      else selectedTaskIds.delete(String(id));
+      renderApp();
+    }
+
+    function toggleSelectAll(checked) {
+      let currentList = [];
+      const isAdmin = currentUser.role === 'admin';
+      let baseTasks = tasks;
+      if (!isAdmin && currentFilter !== 'all_team') baseTasks = tasks.filter(t => String(t.assignee) === String(currentUser.id));
+
+      if (currentFilter === 'front') {
+        const live = baseTasks.filter(t => t.status === 'running');
+        const urgent = baseTasks.filter(t => t.priority === 'urgent' && t.status !== 'completed' && t.status !== 'running');
+        currentList = [...live, ...urgent];
+      } else if (currentFilter === 'total') currentList = baseTasks.filter(t => t.status !== 'completed');
+      else if (currentFilter === 'live') currentList = baseTasks.filter(t => t.status === 'running');
+      else if (currentFilter === 'urgent') currentList = baseTasks.filter(t => t.priority === 'urgent' && t.status !== 'completed');
+      else if (currentFilter === 'followup') currentList = baseTasks.filter(t => t.status === 'followup');
+      else if (currentFilter === 'completed') currentList = baseTasks.filter(t => t.status === 'completed');
+      else if (currentFilter === 'all_team') currentList = tasks.filter(t => t.status !== 'completed');
+      else if (currentFilter === 'members' && selectedMemberId) currentList = tasks.filter(t => String(t.assignee) === String(selectedMemberId) && t.status !== 'completed');
+      else currentList = baseTasks.filter(t => t.status !== 'completed');
+
+      if (checked) currentList.forEach(t => selectedTaskIds.add(String(t.id)));
+      else selectedTaskIds.clear();
+      renderApp();
+    }
+
+    function clearSelection() {
+      selectedTaskIds.clear();
+      renderApp();
+    }
+
+    function toggleDispatchPriority() {
+      const btn = document.getElementById('dispatch-priority-btn');
+      const input = document.getElementById('dispatch-priority');
+      if (input.value === 'normal') {
+        input.value = 'urgent';
+        btn.textContent = 'Urgent';
+        btn.classList.add('bg-rose-500', 'text-white', 'border-rose-500');
+      } else {
+        input.value = 'normal';
+        btn.textContent = 'Normal';
+        btn.classList.remove('bg-rose-500', 'text-white', 'border-rose-500');
+      }
+    }
+
+    function handleFastDispatch(e) {
+      e.preventDefault();
+      const title = document.getElementById('dispatch-title').value;
+      const assignee = document.getElementById('dispatch-assignee').value;
+      const budget = document.getElementById('dispatch-budget').value;
+      const priority = document.getElementById('dispatch-priority').value;
+      createTask(title, assignee, priority, budget);
+      document.getElementById('fast-dispatch-form').reset();
+    }
+
+    function openPaymentSheet() { showPaymentModal = true; renderApp(); }
+    function closePaymentSheet() { showPaymentModal = false; renderApp(); }
+    function openTaskDetail(taskId) { inspectingTaskId = taskId; renderApp(); }
+    function closeTaskDetail() { inspectingTaskId = null; renderApp(); }
+
+    function renderPaymentModal() {
+      const totalAmount = paymentSheet.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      return `
+        <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center">
+                  <i data-lucide="receipt" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 dark:text-slate-100">Payment Sheet</h3>
+                  <p class="text-xs text-slate-500">Record compensation for work</p>
+                </div>
+              </div>
+              <button onclick="closePaymentSheet()" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+
+            <form onsubmit="handleNewPayment(event)" class="my-4 flex flex-col sm:flex-row gap-2">
+              <input id="pay-task-name" type="text" placeholder="Task Name..." required
+                class="flex-1 px-3 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100" />
+              <input id="pay-amount" type="number" step="0.01" min="0" placeholder="Amount (INR)..." required
+                class="w-full sm:w-36 px-3 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100" />
+              <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition">
+                Add Entry
+              </button>
+            </form>
+
+            <div class="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 my-2">
+              ${paymentSheet.length === 0 ? `
+                <div class="py-10 text-center text-slate-400 text-xs">No payment entries recorded yet.</div>
+              ` : paymentSheet.map(p => `
+                <div class="py-2.5 flex items-center justify-between text-xs">
+                  <div class="font-medium text-slate-800 dark:text-slate-200">${p.task_name}</div>
+                  <div class="flex items-center gap-3">
+                    <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">₹${p.amount}</span>
+                    <button onclick="deletePaymentEntry('${p.id}')" class="text-slate-400 hover:text-rose-500">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <span class="text-xs text-slate-500">Total Sum:</span>
+                <span class="ml-2 font-mono font-extrabold text-lg text-emerald-600 dark:text-emerald-400">₹${totalAmount.toFixed(2)}</span>
+              </div>
+              <button onclick="exportPaymentCSV()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Export CSV</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function handleNewPayment(e) {
+      e.preventDefault();
+      const name = document.getElementById('pay-task-name').value;
+      const amount = document.getElementById('pay-amount').value;
+      addPaymentEntry(name, amount);
+    }
+
+    function renderTaskDetailModal(taskId) {
+      const task = tasks.find(t => String(t.id) === String(taskId));
+      if (!task) return '';
+      const isRunning = task.status === 'running';
+      const duration = getTaskDuration(taskId);
+      const assigneeName = (profiles.find(p => String(p.id) === String(task.assignee)) || {}).name || 'Unassigned';
+      const taskComments = comments.filter(c => String(c.task_id) === String(taskId));
+
+      return `
+        <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="flex items-start justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+              <div class="flex-1 pr-4">
+                <div class="flex items-center gap-2 mb-1.5">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${task.priority === 'urgent' ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}">
+                    ${task.priority}
+                  </span>
+                  <span class="text-xs text-slate-400 font-mono">Assigned to ${assigneeName}</span>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 leading-snug">${task.title}</h3>
+              </div>
+              <button onclick="closeTaskDetail()" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+
+            <div class="my-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+              <div>
+                <div class="text-[11px] font-semibold text-slate-500 uppercase">Active Working Time</div>
+                <div class="text-2xl font-black font-mono mt-0.5 ${isRunning ? 'text-emerald-500' : 'text-slate-800 dark:text-slate-200'}">
+                  ${formatDuration(duration)}
+                </div>
+                <div class="text-[10px] text-slate-400 mt-1">
+                  ${isRunning ? 'Timer counts ONLY while running. Starting another task will auto-pause this.' : 'Paused - Timer stopped'}
+                </div>
+              </div>
+              <div>
+                ${isRunning ? `
+                  <button onclick="pauseTask('${task.id}'); closeTaskDetail();" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shadow-sm">
+                    Pause Task
+                  </button>
+                ` : task.status !== 'completed' ? `
+                  <button onclick="startTask('${task.id}'); closeTaskDetail();" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm">
+                    Start Task
+                  </button>
+                ` : `
+                  <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400">Completed</span>
+                `}
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 mb-4">
+              <button onclick="setFollowupTask('${task.id}'); closeTaskDetail();" class="flex-1 py-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-xs font-bold rounded-lg hover:bg-amber-100 transition">
+                Mark Follow-up
+              </button>
+              <button onclick="completeTask('${task.id}'); closeTaskDetail();" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition">
+                Mark Completed
+              </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto mb-4 border-t border-slate-200 dark:border-slate-800 pt-3">
+              <div class="text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">Remarks & Discussion</div>
+              <div class="space-y-2">
+                ${taskComments.length === 0 ? `
+                  <div class="text-xs text-slate-400 italic">No comments yet.</div>
+                ` : taskComments.map(c => `
+                  <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 text-xs">
+                    <div class="flex items-center justify-between text-slate-500 text-[10px] mb-1">
+                      <span class="font-bold text-slate-700 dark:text-slate-300">${c.author}</span>
+                      <span>${new Date(c.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div class="text-slate-800 dark:text-slate-200">${c.body}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <form onsubmit="handleAddComment(event, '${task.id}')" class="flex gap-2">
+              <input id="task-comment-input" type="text" placeholder="Write a remark..." required
+                class="flex-1 px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100" />
+              <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg">
+                Post
+              </button>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    async function handleAddComment(e, taskId) {
+      e.preventDefault();
+      const input = document.getElementById('task-comment-input');
+      const body = input.value.trim();
+      if (!body || !currentUser) return;
+      const newComment = {
+        id: `c_${Date.now()}`,
+        task_id: String(taskId),
+        author: currentUser.name,
+        body,
+        created_at: new Date().toISOString()
+      };
+      comments.push(newComment);
+      if (supabase) await supabase.from('comments').insert(newComment);
+      input.value = '';
+      renderApp();
+    }
+
+    function renderAuthScreen() {
+      return `
+        <div class="min-h-screen flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950">
+          <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-8 border border-slate-200 dark:border-slate-800 shadow-2xl">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20">
+                  <i data-lucide="layers" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <h2 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">TaskQueue</h2>
+                  <p class="text-xs text-slate-500">Team Operations & Working Hours Tracker</p>
+                </div>
+              </div>
+              <button onclick="toggleThemeQuick()" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                <i data-lucide="${document.documentElement.classList.contains('dark') ? 'sun' : 'moon'}" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            ${authError ? `
+              <div class="p-3 mb-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs font-medium">
+                ${authError}
+              </div>
+            ` : ''}
+
+            <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Username / Name</label>
+                <input id="auth-username" type="text" placeholder="e.g. manish, priya, rahul" required
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Password</label>
+                <input id="auth-password" type="password" placeholder="••••••••" required
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden" />
+              </div>
+
+              ${authMode === 'signup' ? `
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Account Role</label>
+                  <select id="auth-role" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100">
+                    <option value="member">Team Member</option>
+                    <option value="admin">Team Lead / Admin</option>
+                  </select>
+                </div>
+              ` : ''}
+
+              <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/20 transition">
+                ${authMode === 'login' ? 'Sign In to TaskQueue' : 'Create Account'}
+              </button>
+            </form>
+
+            <div class="mt-4 text-center">
+              <button onclick="toggleAuthMode()" class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+                ${authMode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
+              </button>
+            </div>
+
+            ${profiles.length > 0 ? `
+              <div class="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
+                <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5 text-center">Instant 1-Click Access</span>
+                <div class="grid grid-cols-2 gap-2">
+                  ${profiles.slice(0, 4).map(p => `
+                    <button onclick="quickLogin('${p.id}')" class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      ${p.name}
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleAuthMode() {
+      authMode = authMode === 'login' ? 'signup' : 'login';
+      authError = '';
+      renderApp();
+    }
+
+    function handleAuthSubmit(e) {
+      e.preventDefault();
+      const u = document.getElementById('auth-username').value;
+      const p = document.getElementById('auth-password').value;
+      if (authMode === 'login') loginUser(u, p);
+      else {
+        const r = document.getElementById('auth-role')?.value || 'member';
+        signupUser(u, p, r);
+      }
+    }
+
+    function quickLogin(userId) {
+      const p = profiles.find(x => String(x.id) === String(userId));
+      if (p) {
+        currentUser = p;
+        localStorage.setItem('taskqueue_user_id', p.id);
+        renderApp();
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+  </html>

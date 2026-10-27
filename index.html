@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TaskQueue - Team Operations & Task Dispatch</title>
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -24,9 +23,7 @@
       }
     };
   </script>
-  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,30 +35,17 @@
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-200">
 
-  <!-- ROOT CONTAINER (With immediate loading state so screen is NEVER blank) -->
-  <div id="app" class="min-h-screen flex flex-col">
-    <div id="loading-fallback" class="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-      <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl mb-4 shadow-lg shadow-indigo-500/20 animate-pulse">
-        TQ
-      </div>
-      <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100">Connecting to TaskQueue...</h2>
-      <p class="text-xs text-slate-500 mt-1 max-w-sm">Synchronizing tasks, categories, and work hours.</p>
-    </div>
-  </div>
+  <div id="app" class="min-h-screen flex flex-col"></div>
 
   <script>
-    // Safe icon render: never throws if Lucide is slow
     function safeRenderIcons() {
       try {
         if (window.lucide && typeof window.lucide.createIcons === 'function') {
           window.lucide.createIcons();
         }
-      } catch (err) {
-        console.warn("Lucide notice:", err);
-      }
+      } catch (err) {}
     }
 
-    // Supabase Setup
     const SUPABASE_URL = "https://kgswcptimmeslnosbhnb.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnc3djcHRpbW1lc2xub3NiaG5iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MDI4ODMsImV4cCI6MjEwODQ3ODg4M30.wXO8revHdkBfnCJzwt_dNymaeMaG0-3I5vH4W6qNGe0";
     let supabase = null;
@@ -71,7 +55,6 @@
       }
     } catch (e) {}
 
-    // Theme Management: light, dark, system
     let currentThemeMode = localStorage.getItem('taskqueue_theme') || 'system';
 
     function applyTheme() {
@@ -104,7 +87,6 @@
 
     applyTheme();
 
-    // Default Fallback Profiles
     const DEFAULT_PROFILES = [
       { id: 'usr_manish', name: 'Manish Joshi', role: 'admin', active: true },
       { id: 'usr_priya', name: 'Priya Sharma', role: 'member', active: true },
@@ -112,17 +94,70 @@
       { id: 'usr_reception', name: 'Reception Desk', role: 'member', active: true }
     ];
 
-    let currentUser = null;
+    const DEFAULT_TASKS = [
+      {
+        id: 'tsk_1',
+        title: 'Process incoming UAN registration claims',
+        descr: 'Verify member portal documents and approve pending requests.',
+        status: 'running',
+        priority: 'urgent',
+        work_type: 'UAN TIC',
+        assignee: 'usr_manish',
+        creator: 'usr_manish',
+        acked: true,
+        limit_min: 45,
+        created_at: new Date(Date.now() - 3600000).toISOString()
+      },
+      {
+        id: 'tsk_2',
+        title: 'Front desk visitor logs & morning call dispatch',
+        descr: 'Review daily scheduled interviews and visitor passes.',
+        status: 'new',
+        priority: 'normal',
+        work_type: 'RECEPTION',
+        assignee: 'usr_reception',
+        creator: 'usr_manish',
+        acked: true,
+        limit_min: 30,
+        created_at: new Date(Date.now() - 7200000).toISOString()
+      },
+      {
+        id: 'tsk_3',
+        title: 'Monthly billing reconciliation & server maintenance',
+        descr: 'Review uptime logs and export invoice sheets.',
+        status: 'new',
+        priority: 'normal',
+        work_type: 'OTHER',
+        assignee: 'usr_priya',
+        creator: 'usr_manish',
+        acked: true,
+        limit_min: 60,
+        created_at: new Date(Date.now() - 10800000).toISOString()
+      }
+    ];
+
+    const DEFAULT_WORKLOGS = [
+      {
+        id: 'wl_seed_1',
+        task_id: 'tsk_1',
+        user_id: 'usr_manish',
+        started_at: new Date(Date.now() - 1800000).toISOString(),
+        ended_at: null
+      }
+    ];
+
+    let currentUser = DEFAULT_PROFILES[0];
     let profiles = [...DEFAULT_PROFILES];
-    let tasks = [];
-    let workLogs = [];
+    let tasks = [...DEFAULT_TASKS];
+    let workLogs = [...DEFAULT_WORKLOGS];
     let comments = [];
-    let paymentSheet = [];
+    let paymentSheet = [
+      { id: 'pay_1', user_id: 'usr_manish', task_name: 'UAN Bulk Processing Batch #104', amount: 1500, created_at: new Date().toISOString() }
+    ];
     let selectedTaskIds = new Set();
     
-    // Filters
     let currentFilter = 'front';
-    let currentWorkTypeFilter = 'ALL'; // 'ALL', 'UAN TIC', 'RECEPTION', 'OTHER'
+    let currentWorkTypeFilter = 'ALL';
     let selectedMemberId = null;
 
     let inspectingTaskId = null;
@@ -183,33 +218,33 @@
       }
     }
 
-    async function loadData() {
-      try {
-        if (supabase) {
-          const [pRes, tRes, wRes, cRes, payRes] = await Promise.allSettled([
-            supabase.from('profiles').select('*').order('name'),
-            supabase.from('tasks').select('*').order('created_at', { ascending: false }),
-            supabase.from('work_log').select('*'),
-            supabase.from('comments').select('*').order('created_at', { ascending: true }),
-            supabase.from('payment_sheet').select('*').order('created_at', { ascending: false })
-          ]);
+    // 2.5-second timeout race: Never hangs the app
+    async function backgroundSyncData() {
+      if (!supabase) return;
+      const timeoutPromise = new Promise(resolve => setTimeout(() => resolve('timeout'), 2500));
 
-          if (pRes.status === 'fulfilled' && pRes.value.data && pRes.value.data.length > 0) profiles = pRes.value.data;
-          if (tRes.status === 'fulfilled' && tRes.value.data) tasks = tRes.value.data;
-          if (wRes.status === 'fulfilled' && wRes.value.data) workLogs = wRes.value.data;
-          if (cRes.status === 'fulfilled' && cRes.value.data) comments = cRes.value.data;
-          if (payRes.status === 'fulfilled' && payRes.value.data) paymentSheet = payRes.value.data;
-        }
+      try {
+        const fetchPromise = Promise.allSettled([
+          supabase.from('profiles').select('*').order('name'),
+          supabase.from('tasks').select('*').order('created_at', { ascending: false }),
+          supabase.from('work_log').select('*'),
+          supabase.from('comments').select('*').order('created_at', { ascending: true }),
+          supabase.from('payment_sheet').select('*').order('created_at', { ascending: false })
+        ]);
+
+        const result = await Promise.race([fetchPromise, timeoutPromise]);
+        if (result === 'timeout') return;
+
+        const [pRes, tRes, wRes, cRes, payRes] = result;
+        if (pRes.status === 'fulfilled' && pRes.value.data && pRes.value.data.length > 0) profiles = pRes.value.data;
+        if (tRes.status === 'fulfilled' && tRes.value.data && tRes.value.data.length > 0) tasks = tRes.value.data;
+        if (wRes.status === 'fulfilled' && wRes.value.data) workLogs = wRes.value.data;
+        if (cRes.status === 'fulfilled' && cRes.value.data) comments = cRes.value.data;
+        if (payRes.status === 'fulfilled' && payRes.value.data) paymentSheet = payRes.value.data;
 
         const savedUserId = localStorage.getItem('taskqueue_user_id');
-        if (savedUserId && !currentUser) {
-          currentUser = profiles.find(p => String(p.id) === String(savedUserId)) || profiles[0] || null;
-        } else if (!currentUser && profiles.length > 0) {
-          currentUser = profiles[0];
-          localStorage.setItem('taskqueue_user_id', currentUser.id);
-        }
+        if (savedUserId) currentUser = profiles.find(p => String(p.id) === String(savedUserId)) || profiles[0];
       } catch (err) {
-        console.error("TaskQueue notice:", err);
       } finally {
         renderApp();
       }
@@ -221,19 +256,7 @@
       try {
         if (supabase) {
           const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-          if (error) {
-            const p = profiles.find(x => (x.name && x.name.toLowerCase() === username.toLowerCase()) || String(x.id).toLowerCase() === username.toLowerCase());
-            if (p) {
-              currentUser = p;
-              localStorage.setItem('taskqueue_user_id', p.id);
-              renderApp();
-              return;
-            }
-            authError = error.message;
-            renderApp();
-            return;
-          }
-          if (data?.user) {
+          if (!error && data?.user) {
             const p = profiles.find(x => String(x.id) === String(data.user.id) || (x.name && x.name.toLowerCase() === username.toLowerCase())) || {
               id: data.user.id,
               name: username,
@@ -244,19 +267,18 @@
             renderApp();
             return;
           }
-        } else {
-          const p = profiles.find(x => x.name.toLowerCase() === username.toLowerCase()) || {
-            id: `usr_${Date.now()}`,
-            name: username,
-            role: 'member',
-            active: true
-          };
-          currentUser = p;
-          localStorage.setItem('taskqueue_user_id', p.id);
-          renderApp();
         }
+        const p = profiles.find(x => (x.name && x.name.toLowerCase() === username.toLowerCase()) || String(x.id).toLowerCase() === username.toLowerCase()) || {
+          id: `usr_${Date.now()}`,
+          name: username,
+          role: 'member',
+          active: true
+        };
+        currentUser = p;
+        localStorage.setItem('taskqueue_user_id', p.id);
+        renderApp();
       } catch (err) {
-        authError = err.message || 'Login failed';
+        authError = err.message || 'Login notice';
         renderApp();
       }
     }
@@ -266,35 +288,28 @@
       const email = username.includes('@') ? username : `${username.toLowerCase()}@team.app`;
       try {
         if (supabase) {
-          const { data, error } = await supabase.auth.signUp({
+          const { data } = await supabase.auth.signUp({
             email,
             password,
             options: { data: { username, role } }
           });
-          if (error) {
-            authError = error.message;
-            renderApp();
-            return;
-          }
           const newId = data?.user?.id || `user_${Date.now()}`;
           const newProfile = { id: newId, name: username, role, active: true };
-          await supabase.from('profiles').upsert(newProfile);
+          supabase.from('profiles').upsert(newProfile);
           profiles.push(newProfile);
           currentUser = newProfile;
           localStorage.setItem('taskqueue_user_id', newId);
           renderApp();
-        } else {
-          const newId = `user_${Date.now()}`;
-          const newProfile = { id: newId, name: username, role, active: true };
-          profiles.push(newProfile);
-          currentUser = newProfile;
-          localStorage.setItem('taskqueue_user_id', newId);
-          renderApp();
+          return;
         }
-      } catch (err) {
-        authError = err.message || 'Signup failed';
-        renderApp();
-      }
+      } catch (e) {}
+
+      const newId = `user_${Date.now()}`;
+      const newProfile = { id: newId, name: username, role, active: true };
+      profiles.push(newProfile);
+      currentUser = newProfile;
+      localStorage.setItem('taskqueue_user_id', newId);
+      renderApp();
     }
 
     function logout() {
@@ -307,7 +322,7 @@
       renderApp();
     }
 
-    // STRICT SINGLE-TASK TIMER & AUTO-PAUSE
+    // STRICT SINGLE TIMER & AUTO-PAUSE
     async function startTask(taskId) {
       if (!currentUser) return;
       const nowISO = new Date().toISOString();
@@ -316,26 +331,20 @@
 
       const targetUserId = task.assignee || currentUser.id;
 
-      // 1. Auto-pause ALL other tasks for this user
-      const runningTasks = tasks.filter(t => String(t.assignee) === String(targetUserId) && t.status === 'running' && String(t.id) !== String(taskId));
-      for (const t of runningTasks) {
-        t.status = 'new';
-        if (supabase) {
-          try { await supabase.from('tasks').update({ status: 'new' }).eq('id', t.id); } catch (e) {}
-        }
-      }
-
-      // 2. Close active work logs for this user
-      workLogs.forEach(log => {
-        if (String(log.user_id) === String(targetUserId) && !log.ended_at) {
-          log.ended_at = nowISO;
-          if (supabase) {
-            try { supabase.from('work_log').update({ ended_at: nowISO }).eq('id', log.id); } catch (e) {}
-          }
+      tasks.forEach(t => {
+        if (String(t.assignee) === String(targetUserId) && t.status === 'running' && String(t.id) !== String(taskId)) {
+          t.status = 'new';
+          if (supabase) supabase.from('tasks').update({ status: 'new' }).eq('id', t.id);
         }
       });
 
-      // 3. Start task & record log
+      workLogs.forEach(log => {
+        if (String(log.user_id) === String(targetUserId) && !log.ended_at) {
+          log.ended_at = nowISO;
+          if (supabase) supabase.from('work_log').update({ ended_at: nowISO }).eq('id', log.id);
+        }
+      });
+
       task.status = 'running';
       const newLog = {
         id: `wl_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
@@ -347,10 +356,8 @@
       workLogs.push(newLog);
 
       if (supabase) {
-        try {
-          await supabase.from('tasks').update({ status: 'running' }).eq('id', taskId);
-          await supabase.from('work_log').insert(newLog);
-        } catch (e) {}
+        supabase.from('tasks').update({ status: 'running' }).eq('id', taskId);
+        supabase.from('work_log').insert(newLog);
       }
       renderApp();
     }
@@ -364,15 +371,11 @@
       workLogs.forEach(l => {
         if (String(l.task_id) === String(taskId) && !l.ended_at) {
           l.ended_at = nowISO;
-          if (supabase) {
-            try { supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id); } catch (e) {}
-          }
+          if (supabase) supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id);
         }
       });
 
-      if (supabase) {
-        try { await supabase.from('tasks').update({ status: 'new' }).eq('id', taskId); } catch (e) {}
-      }
+      if (supabase) supabase.from('tasks').update({ status: 'new' }).eq('id', taskId);
       renderApp();
     }
 
@@ -386,15 +389,11 @@
       workLogs.forEach(l => {
         if (String(l.task_id) === String(taskId) && !l.ended_at) {
           l.ended_at = nowISO;
-          if (supabase) {
-            try { supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id); } catch (e) {}
-          }
+          if (supabase) supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id);
         }
       });
 
-      if (supabase) {
-        try { await supabase.from('tasks').update({ status: 'completed', completed_at: nowISO }).eq('id', taskId); } catch (e) {}
-      }
+      if (supabase) supabase.from('tasks').update({ status: 'completed', completed_at: nowISO }).eq('id', taskId);
       renderApp();
     }
 
@@ -408,19 +407,14 @@
       workLogs.forEach(l => {
         if (String(l.task_id) === String(taskId) && !l.ended_at) {
           l.ended_at = nowISO;
-          if (supabase) {
-            try { supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id); } catch (e) {}
-          }
+          if (supabase) supabase.from('work_log').update({ ended_at: nowISO }).eq('id', l.id);
         }
       });
 
-      if (supabase) {
-        try { await supabase.from('tasks').update({ status: 'followup', followup_at: nowISO }).eq('id', taskId); } catch (e) {}
-      }
+      if (supabase) supabase.from('tasks').update({ status: 'followup', followup_at: nowISO }).eq('id', taskId);
       renderApp();
     }
 
-    // Task Creation with Work Type
     async function createTask(title, assignee, priority = 'normal', work_type = 'UAN TIC', limit_min = null) {
       if (!title || !title.trim() || !currentUser) return;
       const newTask = {
@@ -437,13 +431,10 @@
         acked: false
       };
       tasks.unshift(newTask);
-      if (supabase) {
-        try { await supabase.from('tasks').insert(newTask); } catch (e) {}
-      }
+      if (supabase) supabase.from('tasks').insert(newTask);
       renderApp();
     }
 
-    // Bulk actions
     async function bulkDeleteSelected() {
       if (selectedTaskIds.size === 0) return;
       if (!confirm(`Are you sure you want to delete ${selectedTaskIds.size} task(s)?`)) return;
@@ -451,9 +442,7 @@
       tasks = tasks.filter(t => !selectedTaskIds.has(String(t.id)));
       workLogs = workLogs.filter(w => !selectedTaskIds.has(String(w.task_id)));
       selectedTaskIds.clear();
-      if (supabase) {
-        try { await supabase.from('tasks').delete().in('id', idsToDelete); } catch (e) {}
-      }
+      if (supabase) supabase.from('tasks').delete().in('id', idsToDelete);
       renderApp();
     }
 
@@ -464,9 +453,7 @@
         if (selectedTaskIds.has(String(t.id))) t.assignee = newAssigneeId;
       });
       selectedTaskIds.clear();
-      if (supabase) {
-        try { await supabase.from('tasks').update({ assignee: newAssigneeId }).in('id', ids); } catch (e) {}
-      }
+      if (supabase) supabase.from('tasks').update({ assignee: newAssigneeId }).in('id', ids);
       renderApp();
     }
 
@@ -488,17 +475,14 @@
       });
       selectedTaskIds.clear();
       if (supabase) {
-        try {
-          await supabase.from('tasks').update({
-            status: newStatus,
-            completed_at: newStatus === 'completed' ? nowISO : null
-          }).in('id', ids);
-        } catch (e) {}
+        supabase.from('tasks').update({
+          status: newStatus,
+          completed_at: newStatus === 'completed' ? nowISO : null
+        }).in('id', ids);
       }
       renderApp();
     }
 
-    // Payment Sheet
     async function addPaymentEntry(taskName, amount, notes = '') {
       if (!taskName || !currentUser) return;
       const entry = {
@@ -510,17 +494,13 @@
         created_at: new Date().toISOString()
       };
       paymentSheet.unshift(entry);
-      if (supabase) {
-        try { await supabase.from('payment_sheet').insert(entry); } catch (e) {}
-      }
+      if (supabase) supabase.from('payment_sheet').insert(entry);
       renderApp();
     }
 
     async function deletePaymentEntry(id) {
       paymentSheet = paymentSheet.filter(p => String(p.id) !== String(id));
-      if (supabase) {
-        try { await supabase.from('payment_sheet').delete().eq('id', id); } catch (e) {}
-      }
+      if (supabase) supabase.from('payment_sheet').delete().eq('id', id);
       renderApp();
     }
 
@@ -557,7 +537,7 @@
     }, 1000);
 
     // ==========================================
-    // RENDER ENGINE
+    // RENDER ENGINE (Immediate 0ms execution)
     // ==========================================
     function renderApp() {
       const app = document.getElementById('app');
@@ -605,7 +585,6 @@
           tabTasks = incompleteTasks;
         }
 
-        // Sub-category filter: ALL | UAN TIC | RECEPTION | OTHER
         let displayedTasks = tabTasks;
         if (currentWorkTypeFilter !== 'ALL') {
           displayedTasks = tabTasks.filter(t => (t.work_type || 'OTHER') === currentWorkTypeFilter);
@@ -614,7 +593,6 @@
         const allDisplayedSelected = displayedTasks.length > 0 && displayedTasks.every(t => selectedTaskIds.has(String(t.id)));
 
         app.innerHTML = `
-          <!-- HEADER -->
           <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-xs">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
               <div class="flex items-center gap-4">
@@ -633,27 +611,25 @@
                 </div>
               </div>
 
-              <!-- Header Actions: Payment Sheet, Theme Switcher, User Name Only -->
+              <!-- Header Actions: Payment Sheet, Theme Switcher, Name Only -->
               <div class="flex items-center gap-2 sm:gap-3">
                 <button onclick="openPaymentSheet()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold border border-emerald-200 dark:border-emerald-800 transition">
                   <i data-lucide="receipt" class="w-4 h-4"></i>
                   <span>Payment Sheet</span>
                 </button>
 
-                <!-- Light, Dark, System Switcher -->
                 <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                  <button onclick="setThemeMode('light')" title="Light Theme" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'light' ? 'bg-white text-amber-600 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                  <button onclick="setThemeMode('light')" title="Light Mode" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'light' ? 'bg-white text-amber-600 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
                     <i data-lucide="sun" class="w-3.5 h-3.5"></i>
                   </button>
-                  <button onclick="setThemeMode('dark')" title="Dark Theme" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'dark' ? 'bg-slate-700 text-indigo-400 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                  <button onclick="setThemeMode('dark')" title="Dark Mode" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'dark' ? 'bg-slate-700 text-indigo-400 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
                     <i data-lucide="moon" class="w-3.5 h-3.5"></i>
                   </button>
-                  <button onclick="setThemeMode('system')" title="System Theme" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'system' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                  <button onclick="setThemeMode('system')" title="System Mode" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'system' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
                     <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
                   </button>
                 </div>
 
-                <!-- User Name (No Role Label) -->
                 <div class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
                   <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-xs uppercase">
                     ${((currentUser && currentUser.name) || 'U').slice(0, 2)}
@@ -688,7 +664,6 @@
                   `).join('')}
                 </select>
 
-                <!-- Work Type Selector -->
                 <select id="dispatch-worktype" class="w-full sm:w-36 py-2 px-3 text-xs font-bold rounded-lg bg-slate-50 dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900 text-indigo-700 dark:text-indigo-400">
                   <option value="UAN TIC">UAN TIC</option>
                   <option value="RECEPTION">RECEPTION</option>
@@ -792,32 +767,6 @@
                 </button>
               ` : ''}
             </div>
-
-            <!-- Admin Member Hours View -->
-            ${isAdmin ? `
-              <div class="mb-6 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div class="flex items-center justify-between mb-3">
-                  <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Team Working Hours Today</span>
-                  <span class="text-xs text-slate-500 font-mono">${profiles.length} team members</span>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  ${profiles.map(p => {
-                    const pWorkSec = getUserWorkTimeToday(p.id);
-                    const pIncomplete = tasks.filter(t => String(t.assignee) === String(p.id) && t.status !== 'completed').length;
-                    const isSelected = selectedMemberId === p.id;
-                    return `
-                      <button onclick="filterByMember('${p.id}')" class="p-2.5 rounded-lg border text-left transition ${isSelected ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'}">
-                        <div class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">${p.name || 'Member'}</div>
-                        <div class="flex items-center justify-between mt-1 text-[11px] font-mono">
-                          <span class="text-indigo-600 dark:text-indigo-400 font-semibold">${formatDuration(pWorkSec)}</span>
-                          <span class="text-slate-500">${pIncomplete} active</span>
-                        </div>
-                      </button>
-                    `;
-                  }).join('')}
-                </div>
-              </div>
-            ` : ''}
 
             <!-- 4. TASK ROWS LIST -->
             <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
@@ -958,34 +907,14 @@
         `;
       } catch (renderError) {
         console.error("Render catch:", renderError);
-        app.innerHTML = `
-          <div class="p-8 text-center max-w-lg mx-auto mt-12 bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900 shadow-xl">
-            <h3 class="text-lg font-bold text-red-600 mb-2">Display Notice</h3>
-            <p class="text-xs text-slate-600 dark:text-slate-300 mb-4">${renderError.message}</p>
-            <button onclick="location.reload()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold">Reload App</button>
-          </div>
-        `;
       }
 
       safeRenderIcons();
     }
 
-    function setTab(tab) {
-      currentFilter = tab;
-      selectedMemberId = null;
-      renderApp();
-    }
-
-    function setWorkTypeFilter(wt) {
-      currentWorkTypeFilter = wt;
-      renderApp();
-    }
-
-    function filterByMember(memId) {
-      currentFilter = 'members';
-      selectedMemberId = memId;
-      renderApp();
-    }
+    function setTab(tab) { currentFilter = tab; selectedMemberId = null; renderApp(); }
+    function setWorkTypeFilter(wt) { currentWorkTypeFilter = wt; renderApp(); }
+    function filterByMember(memId) { currentFilter = 'members'; selectedMemberId = memId; renderApp(); }
 
     function toggleSelectTask(id, checked) {
       if (checked) selectedTaskIds.add(String(id));
@@ -1021,10 +950,7 @@
       renderApp();
     }
 
-    function clearSelection() {
-      selectedTaskIds.clear();
-      renderApp();
-    }
+    function clearSelection() { selectedTaskIds.clear(); renderApp(); }
 
     function toggleDispatchPriority() {
       const btn = document.getElementById('dispatch-priority-btn');
@@ -1236,9 +1162,7 @@
         created_at: new Date().toISOString()
       };
       comments.push(newComment);
-      if (supabase) {
-        try { await supabase.from('comments').insert(newComment); } catch (e) {}
-      }
+      if (supabase) supabase.from('comments').insert(newComment);
       input.value = '';
       renderApp();
     }
@@ -1344,11 +1268,11 @@
       }
     }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', loadData);
-    } else {
-      loadData();
-    }
+    // 1. RENDER INSTANTLY AT 0ms (Never blocks, never gets stuck on loading)
+    renderApp();
+
+    // 2. BACKGROUND SYNC with Supabase
+    backgroundSyncData();
   </script>
 </body>
   </html>

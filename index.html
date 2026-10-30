@@ -1,64 +1,2103 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TaskQueue</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-:root{--bg:#f4f7f5;--card:#fff;--ink:#172a24;--muted:#687870;--line:#e0e8e3;--green:#176b4d;--green2:#e5f4ec;--orange:#fff1d7;--red:#ffe8e5;--shadow:0 8px 28px #173c2a0b}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;background:var(--green);color:white;font-weight:650}button.secondary{background:#edf2ef;color:var(--ink)}button.danger{background:#b6372b}button:disabled{opacity:.5;cursor:not-allowed}input,select,textarea{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:white;color:var(--ink)}textarea{min-height:80px;resize:vertical}label{display:block;font-size:12px;color:var(--muted);font-weight:700;margin:8px 0 5px}.hidden{display:none!important}.muted{color:var(--muted)}.small{font-size:12px}.wrap{max-width:1450px;margin:auto;padding:20px}.top{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:20px}.brand{font-size:25px;font-weight:850;letter-spacing:-.8px}.brand span{color:var(--green)}.userline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.badge{background:var(--green2);color:var(--green);padding:5px 9px;border-radius:999px;font-size:12px;font-weight:750}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.kpi,.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}.kpi{cursor:pointer;text-align:left;color:var(--ink);min-height:105px;background:var(--card);border:1px solid var(--line)}.kpi:hover{border-color:#8dbda6;transform:translateY(-1px)}.kpi .num{font-size:30px;font-weight:850;margin-top:5px}.kpi .label{font-size:13px;color:var(--muted);font-weight:700}.section{margin-top:18px}.sectionhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}.sectionhead h2,.panel h2{font-size:18px;margin:0}.filters{display:flex;gap:8px;flex-wrap:wrap}.filters>*{width:auto;min-width:130px}.tasklist{display:grid;gap:10px}.task{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;border:1px solid var(--line);border-radius:12px;padding:13px;background:#fff}.taskmain{min-width:0;flex:1}.tasktitle{font-weight:800;overflow-wrap:anywhere}.taskmeta{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}.pill{font-size:11px;padding:4px 7px;border-radius:999px;background:#edf2ef;color:#4b6056}.pill.urgent{background:var(--red);color:#a52a22}.pill.running{background:var(--green2);color:var(--green)}.pill.followup,.pill.paused{background:var(--orange);color:#82540a}.actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.actions button{padding:7px 10px;font-size:12px}.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:580px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);font-size:13px}th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}.modal{position:fixed;inset:0;background:#0c2119a6;display:flex;align-items:center;justify-content:center;padding:15px;z-index:5}.modalbox{background:var(--bg);border-radius:18px;width:min(900px,100%);max-height:92vh;overflow:auto;padding:18px}.modalhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.modalhead h2{margin:0;font-size:20px}.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.span2{grid-column:1/-1}.login{min-height:100vh;display:grid;place-items:center;padding:18px}.loginbox{width:min(430px,100%);background:white;border:1px solid var(--line);border-radius:20px;padding:25px;box-shadow:var(--shadow)}.loginbox h1{margin:0 0 5px;font-size:28px}.loginbox button{width:100%;margin-top:14px}.notice{padding:11px;border-radius:10px;background:#fff5df;color:#755016;font-size:12px;margin:12px 0}.error{color:#b6372b;font-size:13px;margin-top:10px}.success{color:var(--green);font-size:13px;margin-top:10px}.empty{text-align:center;color:var(--muted);padding:25px}.navrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tab{background:#e8efeb;color:#254638}.tab.active{background:var(--green);color:#fff}.footer{margin:24px 0 10px;color:var(--muted);font-size:12px}
-@media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.wrap{padding:13px}.task{display:block}.task>.actions{margin-top:10px}}@media(max-width:500px){.grid{gap:8px}.kpi{padding:12px;min-height:95px}.kpi .num{font-size:25px}.brand{font-size:22px}.formgrid,.row{grid-template-columns:1fr}.span2{grid-column:auto}.top{align-items:flex-start}}
-</style></head>
-<body>
-<section id="loginView" class="login"><div class="loginbox"><div class="brand">Task<span>Queue</span></div><h1>Sign in</h1><p class="muted">Use your assigned account and password.</p><div class="notice">Passwords are verified by Supabase Auth. A profile row by itself is not a login account.</div><form id="loginForm"><label>Email</label><input id="loginEmail" type="email" autocomplete="username" placeholder="you@company.com" required><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter password" required><button id="loginBtn" type="submit">Sign in securely</button></form><div id="loginMessage" role="status"></div><p class="small muted">If your account has not been created in Supabase Authentication, ask the project owner to create it.</p></div></section>
-<div id="appView" class="hidden"><div class="wrap"><header class="top"><div><div class="brand">Task<span>Queue</span></div><div class="muted small">Team work dashboard</div></div><div class="userline"><span id="userName" style="font-weight:800"></span><span id="superBadge" class="badge hidden">Super Admin Access</span><button id="refreshBtn" class="secondary">Refresh</button><button id="logoutBtn" class="secondary">Log out</button></div></header>
-<div class="grid" id="kpis"></div>
-<section class="panel section"><div class="sectionhead"><h2 id="taskHeading">Tasks</h2><div class="filters"><input id="searchBox" placeholder="Search tasks…"><select id="statusFilter"><option value="all">All statuses</option><option value="new">New</option><option value="running">Running</option><option value="followup">Follow-up</option><option value="completed">Completed</option></select><button id="newTaskBtn">+ New task</button></div></div><div class="tasklist" id="taskList"></div></section>
-<section id="followupSection" class="panel section hidden"><div class="sectionhead"><h2>Follow-up sheet</h2><span class="muted small">Paused work awaiting a follow-up</span></div><div class="tasklist" id="followupList"></div></section>
-<section id="paymentSection" class="panel section hidden"><div class="sectionhead"><h2>Date-wise payment sheet</h2><div class="filters"><input id="paymentDate" type="date"><button id="addPaymentBtn">+ Add record</button></div></div><div id="paymentList"></div></section>
-<div class="footer">TaskQueue browser edition · Work time is calculated from saved work sessions. Database access must be secured with Supabase RLS before real workplace use.</div></div></div>
-<div id="modal" class="modal hidden"><div class="modalbox"><div class="modalhead"><h2 id="modalTitle">Details</h2><button id="closeModal" class="secondary">Close</button></div><div id="modalBody"></div></div></div>
-<script>
-// Public project URL is okay to expose. Paste your Supabase anon/publishable key below.
-const SUPABASE_URL = 'https://kgswcptimmeslnosbhnb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnc3djcHRpbW1lc2xub3NiaG5iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MDI4ODMsImV4cCI6MjEwODQ3ODg4M30.wXO8revHdkBfnCJzwt_dNymaeMaG0-3I5vH4W6qNGe0';
-const $ = id => document.getElementById(id);
-let db=null, authUser=null, me=null, profiles=[], tasks=[], logs=[], payments=[], comments=[], activeFilter='all', selectedMember=null;
-const adminRole = () => ['super_admin','admin'].includes(me?.role);
-const isSuper = () => me?.role === 'super_admin';
-const escapeHtml = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt = d => d ? new Date(d).toLocaleString() : '—';
-const dayStart = date => new Date(date+'T00:00:00');
-const sameDay = (a,b) => a && new Date(a).toDateString()===new Date(b).toDateString();
-const id = prefix => prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);
-function msg(target,text,kind='error'){ $(target).className=kind; $(target).textContent=text; }
-function openModal(title,html){$('modalTitle').textContent=title;$('modalBody').innerHTML=html;$('modal').classList.remove('hidden');}
-function closeModal(){$('modal').classList.add('hidden');$('modalBody').innerHTML='';}
-$('closeModal').onclick=closeModal; $('modal').addEventListener('click',e=>{if(e.target===$('modal'))closeModal()});
-function profileById(pid){return profiles.find(p=>p.id===pid)}
-function taskVisible(t){return adminRole() || t.assignee===me.id || t.creator===me.id}
-function workMsForTask(taskId){return logs.filter(l=>l.task_id===taskId).reduce((sum,l)=>sum+Math.max(0,(l.ended_at?new Date(l.ended_at).getTime():Date.now())-new Date(l.started_at).getTime()),0)}
-function duration(ms){let m=Math.floor(ms/60000),h=Math.floor(m/60);m%=60;return h?`${h}h ${m}m`:`${m}m`}
-async function boot(){if(!window.supabase){msg('loginMessage','Could not load Supabase library. Check your internet connection.');return}if(SUPABASE_ANON_KEY.includes('PASTE_')){msg('loginMessage','First paste your Supabase anon/publishable key into SUPABASE_ANON_KEY in this HTML.');return}db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);const {data:{session}}=await db.auth.getSession();if(session?.user){authUser=session.user;await enterApp()} }
-$('loginForm').addEventListener('submit',async e=>{e.preventDefault();if(!db){await boot();if(!db)return} $('loginBtn').disabled=true;msg('loginMessage','Signing in…','success');const {data,error}=await db.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPassword').value});$('loginBtn').disabled=false;if(error){msg('loginMessage',error.message);return}authUser=data.user;await enterApp()});
-$('logoutBtn').onclick=async()=>{if(db)await db.auth.signOut();authUser=null;me=null;$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('loginPassword').value='';msg('loginMessage','Signed out.','success')};
-async function enterApp(){const {data:p,error}=await db.from('profiles').select('*').eq('email',authUser.email).maybeSingle();if(error||!p){await db.auth.signOut();msg('loginMessage','Login succeeded but no matching public.profiles row was found for '+authUser.email+'. Add a profile row with this email, then sign in again.');return}me=p;$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');$('userName').textContent=p.name;$('superBadge').classList.toggle('hidden',!isSuper());await loadAll()}
-async function loadAll(){const results=await Promise.all([db.from('profiles').select('*').order('name'),db.from('tasks').select('*').order('created_at',{ascending:false}),db.from('work_log').select('*').order('started_at',{ascending:false}),db.from('payment_sheet').select('*').order('created_at',{ascending:false}),db.from('comments').select('*').order('created_at',{ascending:false})]);for(let i=0;i<results.length;i++){if(results[i].error){console.error(results[i].error);if(i===1)alert('Could not load tasks: '+results[i].error.message)}}profiles=results[0].data||[];tasks=(results[1].data||[]).filter(taskVisible);logs=results[2].data||[];payments=results[3].data||[];comments=results[4].data||[];render()}
-$('refreshBtn').onclick=loadAll;$('searchBox').oninput=renderTasks;$('statusFilter').onchange=renderTasks;
-function render(){renderKpis();renderTasks();renderFollowups();renderPayments()}
-function renderKpis(){const today=tasks.filter(t=>sameDay(t.created_at,new Date()));const live=tasks.filter(t=>t.status==='running');const follow=tasks.filter(t=>['followup','paused'].includes(t.status));const done=tasks.filter(t=>t.status==='completed'&&sameDay(t.completed_at||t.created_at,new Date()));const type=(v)=>tasks.filter(t=>t.work_type===v&&t.status!=='completed').length;const cards=[['Live Tasks',live.length,'live'],['Members',profiles.length,'members'],['UAN TIC',type('UAN TIC'),'UAN TIC'],['Reception',type('RECEPTION'),'RECEPTION'],['Other Tasks',type('OTHER'),'OTHER'],['Follow-up',follow.length,'followup'],['Completed',done.length,'completed'],['Reports','↗','reports']];$('kpis').innerHTML=cards.map(([label,n,key])=>`<button class="kpi" data-kpi="${escapeHtml(key)}"><div class="label">${escapeHtml(label)}</div><div class="num">${n}</div><div class="small muted">${key==='reports'?'Daily & monthly':key==='members'?'Team roster':'Open dashboard'}</div></button>`).join('');$('kpis').querySelectorAll('[data-kpi]').forEach(b=>b.onclick=()=>onKpi(b.dataset.kpi));}
-function onKpi(k){activeFilter=k;if(k==='members'){showRoster();return}if(k==='reports'){showReports();return}if(k==='followup'){$('followupSection').classList.remove('hidden');$('followupSection').scrollIntoView({behavior:'smooth'});renderFollowups();return}if(k==='live'||['UAN TIC','RECEPTION','OTHER','completed'].includes(k)){$('statusFilter').value=k==='live'?'running':k==='completed'?'completed':'all';renderTasks();$('taskHeading').textContent=k==='live'?'Live Tasks':k==='completed'?'Completed Tasks':k==='UAN TIC'?'UAN TIC Tasks':k==='RECEPTION'?'Reception Tasks':'Other Tasks';if(['UAN TIC','RECEPTION','OTHER'].includes(k))$('searchBox').value='';renderTasks();if(['UAN TIC','RECEPTION','OTHER'].includes(k)){$('taskList').innerHTML=renderTaskCards(tasks.filter(t=>t.work_type===k&&t.status!=='completed'))}$('taskList').scrollIntoView({behavior:'smooth'});}}
-function renderTasks(){let list=tasks.filter(taskVisible);const s=$('searchBox').value.trim().toLowerCase(),st=$('statusFilter').value;if(st!=='all')list=list.filter(t=>t.status===st);if(s)list=list.filter(t=>[t.title,t.descr,t.work_type,profileById(t.assignee)?.name].join(' ').toLowerCase().includes(s));if(['UAN TIC','RECEPTION','OTHER'].includes(activeFilter))list=list.filter(t=>t.work_type===activeFilter);$('taskList').innerHTML=renderTaskCards(list)||'<div class="empty">No tasks match this view.</div>';}
-function renderTaskCards(list){return list.map(t=>{const ass=profileById(t.assignee)?.name||'Unassigned';const canControl=adminRole()||t.assignee===me.id;let buttons='';if(t.status==='new'||t.status==='followup'||t.status==='paused')buttons+=`<button data-act="start" data-id="${escapeHtml(t.id)}">Start / Resume</button>`;if(t.status==='running')buttons+=`<button class="secondary" data-act="pause" data-id="${escapeHtml(t.id)}">Pause</button>`;if(t.status!=='completed')buttons+=`<button data-act="complete" data-id="${escapeHtml(t.id)}">Complete</button>`;buttons+=`<button class="secondary" data-act="details" data-id="${escapeHtml(t.id)}">Details / comments</button>`;if(adminRole())buttons+=`<button class="secondary" data-act="edit" data-id="${escapeHtml(t.id)}">Edit</button>`;return `<article class="task"><div class="taskmain"><div class="tasktitle">${escapeHtml(t.title)}</div><div class="muted small">${escapeHtml(t.descr||'No description')} </div><div class="taskmeta"><span class="pill ${escapeHtml(t.status)}">${escapeHtml(t.status)}</span><span class="pill">${escapeHtml(t.work_type)}</span><span class="pill ${t.priority==='urgent'?'urgent':''}">${escapeHtml(t.priority)}</span><span class="pill">${escapeHtml(ass)}</span><span class="pill">Work ${duration(workMsForTask(t.id))}</span></div><div class="small muted" style="margin-top:6px">Created ${fmt(t.created_at)} · Follow-up ${fmt(t.followup_at)}</div><div class="actions">${canControl?buttons:buttons.replace(/<button data-act="start"[\s\S]*?<\/button>/g,'').replace(/<button class="secondary" data-act="pause"[\s\S]*?<\/button>/g,'').replace(/<button data-act="complete"[\s\S]*?<\/button>/g,'')}</div></div></article>`}).join('')}
-$('taskList').addEventListener('click',async e=>{const b=e.target.closest('button[data-act]');if(!b)return;const t=tasks.find(x=>x.id===b.dataset.id);if(!t)return;const act=b.dataset.act;if(act==='details')return showTaskDetails(t);if(act==='edit')return editTask(t);if(!adminRole()&&t.assignee!==me.id){alert('Only the assignee or an authorized administrator can change this task.');return}if(act==='start'){const {error}=await db.rpc('start_task',{p_task_id:t.id,p_user_id:me.id});if(error)return alert('Start failed: '+error.message)}if(act==='pause'){const when=prompt('Follow-up date/time (optional, local format YYYY-MM-DDTHH:MM). Leave blank to schedule later.','');let date=null;if(when){const d=new Date(when);if(isNaN(d))return alert('Invalid date/time.');date=d.toISOString()}const {error}=await db.rpc('pause_task',{p_task_id:t.id,p_user_id:me.id,p_followup_at:date});if(error)return alert('Pause failed: '+error.message)}if(act==='complete'){if(!confirm('Mark this task completed?'))return;const {error}=await db.rpc('complete_task',{p_task_id:t.id,p_user_id:me.id});if(error)return alert('Complete failed: '+error.message)}await loadAll()});
-$('newTaskBtn').onclick=()=>editTask(null);
-function editTask(t){if(t&&!adminRole()){alert('Only an authorized administrator can edit an existing task.');return}const opts=profiles.map(p=>`<option value="${escapeHtml(p.id)}" ${t?.assignee===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('');openModal(t?'Edit task':'Create task',`<form id="taskForm"><div class="formgrid"><div class="span2"><label>Task title</label><input name="title" required maxlength="180" value="${escapeHtml(t?.title||'')}"></div><div class="span2"><label>Description</label><textarea name="descr">${escapeHtml(t?.descr||'')}</textarea></div><div><label>Category</label><select name="work_type"><option ${t?.work_type==='UAN TIC'?'selected':''}>UAN TIC</option><option ${t?.work_type==='RECEPTION'?'selected':''}>RECEPTION</option><option ${!t||t?.work_type==='OTHER'?'selected':''}>OTHER</option></select></div><div><label>Priority</label><select name="priority"><option value="normal" ${t?.priority!=='urgent'?'selected':''}>Normal</option><option value="urgent" ${t?.priority==='urgent'?'selected':''}>Urgent</option></select></div><div><label>Assign to</label><select name="assignee"><option value="">Unassigned</option>${opts}</select></div><div><label>Time limit (minutes)</label><input name="limit_min" type="number" min="1" value="${Number(t?.limit_min||45)}"></div></div><div class="actions"><button type="submit">Save task</button></div><div id="taskFormMsg"></div></form>`);$('taskForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),payload={title:f.get('title').trim(),descr:f.get('descr')||'',work_type:f.get('work_type'),priority:f.get('priority'),assignee:f.get('assignee')||null,limit_min:Number(f.get('limit_min')||45)};let res;if(t)res=await db.from('tasks').update(payload).eq('id',t.id);else res=await db.from('tasks').insert({...payload,id:id('tsk'),status:'new',creator:me.id,acked:false});if(res.error){msg('taskFormMsg',res.error.message);return}closeModal();await loadAll()}}
-function showTaskDetails(t){const cs=comments.filter(c=>c.task_id===t.id);openModal(t.title,`<p>${escapeHtml(t.descr||'No description')}</p><div class="taskmeta"><span class="pill">${escapeHtml(t.work_type)}</span><span class="pill">${escapeHtml(t.status)}</span><span class="pill">Assignee: ${escapeHtml(profileById(t.assignee)?.name||'Unassigned')}</span></div><p class="small muted">Created: ${fmt(t.created_at)} · Completed: ${fmt(t.completed_at)} · Total work: ${duration(workMsForTask(t.id))}</p><h3>Work sessions</h3><div class="tablewrap"><table><thead><tr><th>Started</th><th>Ended</th><th>Duration</th></tr></thead><tbody>${logs.filter(l=>l.task_id===t.id).map(l=>`<tr><td>${fmt(l.started_at)}</td><td>${fmt(l.ended_at)}</td><td>${duration(Math.max(0,(l.ended_at?new Date(l.ended_at).getTime():Date.now())-new Date(l.started_at).getTime()))}</td></tr>`).join('')||'<tr><td colspan="3">No work sessions yet</td></tr>'}</tbody></table></div><h3>Comments</h3><div>${cs.map(c=>`<p><b>${escapeHtml(c.author)}</b> <span class="small muted">${fmt(c.created_at)}</span><br>${escapeHtml(c.body)}</p>`).join('')||'<p class="muted">No comments yet.</p>'}</div><form id="commentForm"><label>Add comment</label><textarea name="body" required maxlength="2000"></textarea><button type="submit">Post comment</button><div id="commentMsg"></div></form>`);$('commentForm').onsubmit=async e=>{e.preventDefault();const body=new FormData(e.target).get('body').trim();if(!body)return;const {error}=await db.from('comments').insert({id:id('cmt'),task_id:t.id,author:me.name,body});if(error){msg('commentMsg',error.message);return}await loadAll();const updated=tasks.find(x=>x.id===t.id)||t;showTaskDetails(updated)}}
-function showRoster(){const members=profiles.map(p=>{const mt=tasks.filter(t=>t.assignee===p.id);const active=mt.filter(t=>t.status==='running').length;const urgent=mt.filter(t=>t.priority==='urgent'&&t.status!=='completed').length;const ms=logs.filter(l=>l.user_id===p.id&&sameDay(l.started_at,new Date())).reduce((sum,l)=>sum+Math.max(0,(l.ended_at?new Date(l.ended_at).getTime():Date.now())-new Date(l.started_at).getTime()),0);return `<tr><td><button class="secondary" data-member="${escapeHtml(p.id)}">${escapeHtml(p.name)}</button></td><td>${active}</td><td>${urgent}</td><td>${duration(ms)}</td></tr>`}).join('');openModal('Team members',`<p class="muted small">Select a name to view their assigned tasks.</p><div class="tablewrap"><table><thead><tr><th>Name</th><th>Active</th><th>Urgent</th><th>Today's work</th></tr></thead><tbody>${members}</tbody></table></div>`);$('modalBody').querySelectorAll('[data-member]').forEach(b=>b.onclick=()=>showMemberTasks(b.dataset.member))}
-function showMemberTasks(pid){const p=profileById(pid);const list=tasks.filter(t=>t.assignee===pid||t.creator===pid);openModal(p?.name||'Member tasks',`<div class="tasklist">${renderTaskCards(list)||'<div class="empty">No tasks.</div>'}</div>`);$('modalBody').querySelectorAll('[data-act="details"]').forEach(b=>b.onclick=()=>showTaskDetails(tasks.find(t=>t.id===b.dataset.id)));}
-function showReports(){const today=new Date().toISOString().slice(0,10);openModal('Daily & monthly reports',`<div class="navrow"><button class="tab active" id="dailyTab">Daily report</button><button class="tab" id="monthlyTab">Monthly report</button></div><div class="row"><div><label>Date</label><input id="reportDate" type="date" value="${today}"></div><div><label>Month</label><input id="reportMonth" type="month" value="${today.slice(0,7)}"></div></div><div class="actions"><button id="runReport">Generate report</button><button id="exportReport" class="secondary">Export CSV</button></div><div id="reportOutput" class="section"></div>`);let mode='daily',rows=[];const run=()=>{const date=$('reportDate').value,month=$('reportMonth').value;rows=[];const filtered=tasks.filter(t=>mode==='daily'?sameDay(t.created_at,date)||sameDay(t.completed_at,date):String(t.created_at||'').slice(0,7)===month||String(t.completed_at||'').slice(0,7)===month);for(const p of profiles){const pt=filtered.filter(t=>t.assignee===p.id);const work=logs.filter(l=>l.user_id===p.id&&(mode==='daily'?String(l.started_at).slice(0,10)===date:String(l.started_at).slice(0,7)===month)).reduce((s,l)=>s+Math.max(0,(l.ended_at?new Date(l.ended_at).getTime():Date.now())-new Date(l.started_at).getTime()),0);rows.push({Member:p.name,Tasks:pt.length,Completed:pt.filter(t=>t.status==='completed'&&(mode==='daily'?String(t.completed_at||'').slice(0,10)===date:String(t.completed_at||'').slice(0,7)===month)).length,'Active work time':duration(work),'Running now':pt.filter(t=>t.status==='running').length,'Follow-up':pt.filter(t=>['followup','paused'].includes(t.status)).length});} $('reportOutput').innerHTML=`<div class="tablewrap"><table><thead><tr>${Object.keys(rows[0]||{Member:'',Tasks:'',Completed:'','Active work time':'','Running now':'','Follow-up':''}).map(k=>`<th>${escapeHtml(k)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${Object.values(r).map(v=>`<td>${escapeHtml(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><h3>Completed tasks</h3><div class="tasklist">${renderTaskCards(filtered.filter(t=>t.status==='completed'))||'<div class="empty">No completed tasks for this period.</div>'}</div><p class="small muted">Empty time is not shown because this schema does not store shift start/end hours. Accurate pause intervals require a separate pause-event table; current work_log stores work sessions only.</p>`};$('dailyTab').onclick=()=>{mode='daily';$('dailyTab').classList.add('active');$('monthlyTab').classList.remove('active');run()};$('monthlyTab').onclick=()=>{mode='monthly';$('monthlyTab').classList.add('active');$('dailyTab').classList.remove('active');run()};$('runReport').onclick=run;$('exportReport').onclick=()=>{if(!rows.length)run();const headers=Object.keys(rows[0]||{});const csv=[headers.join(','),...rows.map(r=>headers.map(k=>'"'+String(r[k]??'').replace(/"/g,'""')+'"').join(','))].join('\r\n');download('taskqueue-report.csv',csv,'text/csv')};run()}
-function renderFollowups(){const list=tasks.filter(t=>['followup','paused'].includes(t.status));$('followupSection').classList.toggle('hidden',list.length===0);$('followupList').innerHTML=renderTaskCards(list)||'<div class="empty">No follow-ups pending.</div>';}
-function renderPayments(){if(!adminRole())return;$('paymentSection').classList.remove('hidden');if(!$('paymentDate').value)$('paymentDate').value=new Date().toISOString().slice(0,10);const d=$('paymentDate').value;const list=payments.filter(p=>String(p.created_at).slice(0,10)===d);$('paymentList').innerHTML=`<div class="tablewrap"><table><thead><tr><th>Person</th><th>Task / item</th><th>Amount</th><th>Notes</th><th>Actions</th></tr></thead><tbody>${list.map(p=>`<tr><td>${escapeHtml(profileById(p.user_id)?.name||'—')}</td><td>${escapeHtml(p.task_name)}</td><td>${Number(p.amount).toFixed(2)}</td><td>${escapeHtml(p.notes||'')}</td><td><button class="secondary" data-pay-edit="${escapeHtml(p.id)}">Edit</button> <button class="danger" data-pay-del="${escapeHtml(p.id)}">Delete</button></td></tr>`).join('')||'<tr><td colspan="5">No records for this date.</td></tr>'}</tbody></table></div>`;$('paymentList').querySelectorAll('[data-pay-edit]').forEach(b=>b.onclick=()=>paymentForm(payments.find(p=>p.id===b.dataset.payEdit)));$('paymentList').querySelectorAll('[data-pay-del]').forEach(b=>b.onclick=async()=>{if(!confirm('Permanently delete this payment record?'))return;const {error}=await db.from('payment_sheet').delete().eq('id',b.dataset.payDel);if(error)alert(error.message);else await loadAll()})}
-$('paymentDate').onchange=renderPayments;$('addPaymentBtn').onclick=()=>paymentForm(null);
-function paymentForm(p){if(!adminRole())return;openModal(p?'Edit payment record':'Add payment record',`<form id="payForm"><label>Member</label><select name="user_id">${profiles.map(x=>`<option value="${escapeHtml(x.id)}" ${p?.user_id===x.id?'selected':''}>${escapeHtml(x.name)}</option>`).join('')}</select><label>Task / item</label><input name="task_name" required value="${escapeHtml(p?.task_name||'')}"><label>Amount</label><input name="amount" type="number" step="0.01" min="0" required value="${Number(p?.amount||0)}"><label>Notes</label><textarea name="notes">${escapeHtml(p?.notes||'')}</textarea><button type="submit">Save record</button><div id="payMsg"></div></form>`);$('payForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),data={user_id:f.get('user_id')||null,task_name:f.get('task_name').trim(),amount:Number(f.get('amount')),notes:f.get('notes')||''};const res=p?await db.from('payment_sheet').update(data).eq('id',p.id):await db.from('payment_sheet').insert({...data,id:id('pay'),created_at:new Date(($('paymentDate').value||new Date().toISOString().slice(0,10))+'T12:00:00').toISOString()});if(res.error){msg('payMsg',res.error.message);return}closeModal();await loadAll()}}
-function download(name,text,type){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url)}
-boot();
-</script></body></html>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>TaskQueue - Team Operations & Dispatch</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    window.tailwind = window.tailwind || {};
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Supabase JS Client (UMD creates window.supabase) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .btn-action { transition: all 0.15s ease-in-out; }
+    .btn-action:active { transform: scale(0.97); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.4); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.7); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-150">
+
+  <!-- ROOT CONTAINER -->
+  <div id="app" class="min-h-screen flex flex-col">
+    <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/20">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          </div>
+          <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">TaskQueue</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-slate-500">Connecting to TaskQueue workspace...</span>
+        </div>
+      </div>
+    </header>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
+      <div class="p-8 text-center text-slate-500">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-3"></div>
+        <p class="font-semibold text-sm">Synchronizing tasks and team live board...</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function() {
+      'use strict';
+
+      // Native Inline SVGs (No CDN dependencies)
+      const ICONS = {
+        layers: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>',
+        play: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"></polygon></svg>',
+        pause: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" fill="currentColor"></rect><rect x="14" y="4" width="4" height="16" fill="currentColor"></rect></svg>',
+        check: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>',
+        trash: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>',
+        clock: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2"></path></svg>',
+        receipt: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"></path></svg>',
+        sun: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>',
+        moon: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path></svg>',
+        monitor: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" stroke-width="2"></rect><line x1="8" y1="21" x2="16" y2="21" stroke-width="2"></line><line x1="12" y1="17" x2="12" y2="21" stroke-width="2"></line></svg>',
+        plus: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>',
+        close: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>',
+        download: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>',
+        alert: '<svg class="w-3.5 h-3.5 text-rose-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>',
+        logout: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>',
+        lock: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-width="2"></rect><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11V7a5 5 0 0110 0v4"></path></svg>',
+        user: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>',
+        users: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>',
+        edit: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>',
+        calendar: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"></rect><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"></line><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"></line><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"></line></svg>'
+      };
+
+      // Supabase Client: Named `sb` to avoid collision with window.supabase
+      const SUPABASE_URL = "https://kgswcptimmeslnosbhnb.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnc3djcHRpbW1lc2xub3NiaG5iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MDI4ODMsImV4cCI6MjEwODQ3ODg4M30.wXO8revHdkBfnCJzwt_dNymaeMaG0-3I5vH4W6qNGe0";
+      let sb = null;
+      try {
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+          sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+      } catch (e) {
+        console.warn("Supabase init notice:", e);
+      }
+
+      // Theme Management
+      let currentThemeMode = localStorage.getItem('taskqueue_theme') || 'system';
+
+      function applyTheme() {
+        try {
+          if (currentThemeMode === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else if (currentThemeMode === 'light') {
+            document.documentElement.classList.remove('dark');
+          } else {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
+          }
+        } catch (e) {}
+      }
+
+      function setThemeMode(mode) {
+        currentThemeMode = mode;
+        localStorage.setItem('taskqueue_theme', mode);
+        applyTheme();
+        renderApp();
+      }
+
+      applyTheme();
+
+      // ==========================================
+      // STRICT TEAM MEMBERS: 7 MEMBERS
+      // (Super Admin: Admin@123 · Members: Abcd@123)
+      // ==========================================
+      const SUPER_ADMIN_PASSWORD = "Admin@123";
+      const UNIVERSAL_PASSWORD = "Abcd@123";
+
+      const DEFAULT_PROFILES = [
+        { id: 'usr_superadmin', name: 'Super Admin', email: 'superadmin@task.app', role: 'super_admin', active: true },
+        { id: 'usr_manish', name: 'Manish', email: 'manish@team.app', role: 'admin', active: true },
+        { id: 'usr_gautam', name: 'Gautam', email: 'gautam@team.app', role: 'member', active: true },
+        { id: 'usr_jyoti', name: 'Jyoti', email: 'jyoti@team.app', role: 'member', active: true },
+        { id: 'usr_taniya', name: 'Taniya', email: 'taniya@team.app', role: 'member', active: true },
+        { id: 'usr_kanak', name: 'Kanak', email: 'kanak@team.app', role: 'member', active: true },
+        { id: 'usr_riya', name: 'Riya', email: 'riya@team.app', role: 'member', active: true }
+      ];
+
+      const DEFAULT_TASKS = [
+        {
+          id: 'tsk_seed_1',
+          title: 'Process incoming UAN registration claims',
+          descr: 'Verify member portal documents and approve pending requests.',
+          status: 'running',
+          priority: 'urgent',
+          work_type: 'UAN TIC',
+          assignee: 'usr_manish',
+          creator: 'usr_manish',
+          acked: true,
+          limit_min: 45,
+          created_at: new Date(Date.now() - 3600000).toISOString()
+        },
+        {
+          id: 'tsk_seed_2',
+          title: 'Front desk visitor logs & morning call dispatch',
+          descr: 'Review daily scheduled interviews and visitor passes.',
+          status: 'new',
+          priority: 'normal',
+          work_type: 'RECEPTION',
+          assignee: 'usr_gautam',
+          creator: 'usr_manish',
+          acked: true,
+          limit_min: 30,
+          created_at: new Date(Date.now() - 7200000).toISOString()
+        },
+        {
+          id: 'tsk_seed_3',
+          title: 'Verify UAN KYC document upload approvals',
+          descr: 'Cross-check Aadhaar and bank details for claim settlement.',
+          status: 'new',
+          priority: 'urgent',
+          work_type: 'UAN TIC',
+          assignee: 'usr_jyoti',
+          creator: 'usr_manish',
+          acked: true,
+          limit_min: 40,
+          created_at: new Date(Date.now() - 5400000).toISOString()
+        },
+        {
+          id: 'tsk_seed_4',
+          title: 'Monthly billing reconciliation & server maintenance',
+          descr: 'Review uptime logs and export invoice sheets.',
+          status: 'new',
+          priority: 'normal',
+          work_type: 'OTHER',
+          assignee: 'usr_taniya',
+          creator: 'usr_manish',
+          acked: true,
+          limit_min: 60,
+          created_at: new Date(Date.now() - 10800000).toISOString()
+        },
+        {
+          id: 'tsk_seed_5',
+          title: 'Client enquiry call log and appointments schedule',
+          descr: 'Update reception logbook and follow up on client calls.',
+          status: 'new',
+          priority: 'normal',
+          work_type: 'RECEPTION',
+          assignee: 'usr_kanak',
+          creator: 'usr_manish',
+          acked: true,
+          limit_min: 35,
+          created_at: new Date(Date.now() - 9000000).toISOString()
+        },
+        {
+          id: 'tsk_seed_6',
+          title: 'Audit documentation files & system records backup',
+          descr: 'Archive previous week closed files and verify audit logs.',
+          status: 'completed',
+          priority: 'normal',
+          work_type: 'OTHER',
+          assignee: 'usr_riya',
+          creator: 'usr_manish',
+          acked: true,
+          limit_min: 50,
+          created_at: new Date(Date.now() - 14400000).toISOString(),
+          completed_at: new Date(Date.now() - 3600000).toISOString()
+        }
+      ];
+
+      const DEFAULT_WORKLOGS = [
+        {
+          id: 'wl_seed_1',
+          task_id: 'tsk_seed_1',
+          user_id: 'usr_manish',
+          started_at: new Date(Date.now() - 1200000).toISOString(),
+          ended_at: null
+        },
+        {
+          id: 'wl_seed_2',
+          task_id: 'tsk_seed_6',
+          user_id: 'usr_riya',
+          started_at: new Date(Date.now() - 7200000).toISOString(),
+          ended_at: new Date(Date.now() - 3600000).toISOString()
+        }
+      ];
+
+      // Master State
+      let profiles = [...DEFAULT_PROFILES];
+      let tasks = [...DEFAULT_TASKS];
+      let workLogs = [...DEFAULT_WORKLOGS];
+      let comments = [];
+      let paymentSheet = [
+        { id: 'pay_seed_1', user_id: 'usr_manish', task_name: 'UAN Bulk Processing Batch #104', amount: 1500, notes: 'Completed batch approval', created_at: new Date().toISOString() },
+        { id: 'pay_seed_2', user_id: 'usr_gautam', task_name: 'Front desk morning shift coordination', amount: 800, notes: 'Client reception logs', created_at: new Date().toISOString() }
+      ];
+      let selectedTaskIds = new Set();
+
+      // Authentication State
+      let currentUser = null;
+      let loginError = '';
+      let selectedLoginUserId = 'usr_manish';
+
+      try {
+        const savedUserStr = localStorage.getItem('taskqueue_logged_user');
+        if (savedUserStr) {
+          const parsed = JSON.parse(savedUserStr);
+          const found = DEFAULT_PROFILES.find(p => String(p.id) === String(parsed.id) || p.name.toLowerCase() === (parsed.name || '').toLowerCase());
+          if (found) currentUser = found;
+        } else {
+          const savedUserId = localStorage.getItem('taskqueue_user_id');
+          if (savedUserId) {
+            const found = DEFAULT_PROFILES.find(p => String(p.id) === String(savedUserId));
+            if (found) currentUser = found;
+          }
+        }
+      } catch (e) {
+        currentUser = null;
+      }
+
+      let currentFilter = 'front';
+      let currentWorkTypeFilter = 'ALL';
+      let selectedMemberId = null;
+      let drilldownMemberId = null;
+      let inspectingTaskId = null;
+      let showPaymentModal = false;
+      let showMembersRosterModal = false;
+      let showReportsModal = false;
+      let reportDate = new Date().toISOString().slice(0, 10);
+      let reportMonth = new Date().toISOString().slice(0, 7);
+      let reportMode = 'daily';
+      let expandedReportMemberId = null;
+
+      // Payment Sheet Date Filter & Editing
+      let selectedPaymentDate = new Date().toISOString().slice(0, 10);
+      let showAllPaymentDates = false;
+      let editingPaymentId = null;
+
+      function getISTString() {
+        return new Date().toLocaleTimeString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+      }
+
+      function formatDuration(totalSeconds) {
+        if (!totalSeconds || isNaN(totalSeconds) || totalSeconds < 0) return '0m';
+        const hrs = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
+        const secs = Math.floor(totalSeconds % 60);
+        if (hrs > 0) return `${hrs}h ${mins}m`;
+        if (mins > 0) return `${mins}m ${secs}s`;
+        return `${secs}s`;
+      }
+
+      function getTaskDuration(taskId) {
+        const logs = workLogs.filter(w => String(w.task_id) === String(taskId));
+        let total = 0;
+        logs.forEach(l => {
+          const start = new Date(l.started_at).getTime();
+          const end = l.ended_at ? new Date(l.ended_at).getTime() : Date.now();
+          if (!isNaN(start) && !isNaN(end)) {
+            total += Math.max(0, Math.floor((end - start) / 1000));
+          }
+        });
+        return total;
+      }
+
+      function getUserWorkTimeToday(userId) {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const logs = workLogs.filter(w => {
+          if (String(w.user_id) !== String(userId)) return false;
+          const s = w.started_at ? w.started_at.slice(0, 10) : '';
+          return s === todayStr;
+        });
+        let total = 0;
+        logs.forEach(l => {
+          const start = new Date(l.started_at).getTime();
+          const end = l.ended_at ? new Date(l.ended_at).getTime() : Date.now();
+          if (!isNaN(start) && !isNaN(end)) {
+            total += Math.max(0, Math.floor((end - start) / 1000));
+          }
+        });
+        return total;
+      }
+
+      // Background Sync with Supabase (Graceful fallback)
+      async function backgroundSyncData() {
+        if (!sb) return;
+        try {
+          const [pRes, tRes, wRes, cRes, payRes] = await Promise.allSettled([
+            sb.from('profiles').select('*').order('name'),
+            sb.from('tasks').select('*').order('created_at', { ascending: false }),
+            sb.from('work_log').select('*').order('started_at', { ascending: true }),
+            sb.from('comments').select('*').order('created_at', { ascending: true }),
+            sb.from('payment_sheet').select('*').order('created_at', { ascending: false })
+          ]);
+
+          if (pRes.status === 'fulfilled' && pRes.value.data && pRes.value.data.length > 0) {
+            profiles = pRes.value.data;
+          }
+          if (tRes.status === 'fulfilled' && tRes.value.data && tRes.value.data.length > 0) {
+            tasks = tRes.value.data;
+          }
+          if (wRes.status === 'fulfilled' && wRes.value.data && wRes.value.data.length > 0) {
+            workLogs = wRes.value.data;
+          }
+          if (cRes.status === 'fulfilled' && cRes.value.data && cRes.value.data.length > 0) {
+            comments = cRes.value.data;
+          }
+          if (payRes.status === 'fulfilled' && payRes.value.data && payRes.value.data.length > 0) {
+            paymentSheet = payRes.value.data;
+          }
+          renderApp();
+        } catch (err) {
+          console.warn("Background sync error (sample data active):", err);
+        }
+      }
+
+      // Live Timers update every second
+      setInterval(() => {
+        const istEl = document.getElementById('ist-live-clock');
+        if (istEl) istEl.textContent = getISTString();
+
+        const runningTasks = tasks.filter(t => t.status === 'running');
+        runningTasks.forEach(task => {
+          const timerEl = document.getElementById(`task-timer-${task.id}`);
+          if (timerEl) timerEl.textContent = formatDuration(getTaskDuration(task.id));
+        });
+
+        if (currentUser) {
+          const userWorkEl = document.getElementById('user-worktime-display');
+          if (userWorkEl) {
+            userWorkEl.textContent = `${formatDuration(getUserWorkTimeToday(currentUser.id))} today`;
+          }
+        }
+      }, 1000);
+
+      // Task Operations
+      async function startTask(taskId) {
+        if (!currentUser) return;
+        const nowIso = new Date().toISOString();
+
+        workLogs.forEach(w => {
+          if (String(w.user_id) === String(currentUser.id) && !w.ended_at) {
+            w.ended_at = nowIso;
+          }
+        });
+
+        tasks.forEach(t => {
+          if (String(t.assignee) === String(currentUser.id) && t.status === 'running' && String(t.id) !== String(taskId)) {
+            t.status = 'followup';
+          }
+        });
+
+        const target = tasks.find(t => String(t.id) === String(taskId));
+        if (target) {
+          target.status = 'running';
+          target.acked = true;
+          workLogs.push({
+            id: `wl_${Date.now()}`,
+            task_id: target.id,
+            user_id: currentUser.id,
+            started_at: nowIso,
+            ended_at: null
+          });
+        }
+        renderApp();
+
+        if (sb) {
+          try {
+            await sb.rpc('start_task', { p_task_id: taskId, p_user_id: currentUser.id });
+          } catch (e) {
+            console.warn("Fallback to client-side state:", e);
+          }
+        }
+      }
+
+      async function pauseTask(taskId, followupAt = null) {
+        if (!currentUser) return;
+        const nowIso = new Date().toISOString();
+
+        workLogs.forEach(w => {
+          if (String(w.task_id) === String(taskId) && !w.ended_at) {
+            w.ended_at = nowIso;
+          }
+        });
+
+        const target = tasks.find(t => String(t.id) === String(taskId));
+        if (target) {
+          target.status = 'followup';
+          if (followupAt !== null) target.followup_at = followupAt;
+        }
+        renderApp();
+
+        if (sb) {
+          try {
+            await sb.rpc('pause_task', { p_task_id: taskId, p_user_id: currentUser.id, p_followup_at: followupAt });
+          } catch (e) {
+            console.warn("RPC fallback:", e);
+          }
+        }
+      }
+
+      async function scheduleFollowup(taskId, followupAt) {
+        const target = tasks.find(t => String(t.id) === String(taskId));
+        if (target) {
+          target.followup_at = followupAt;
+          target.status = 'followup';
+        }
+        renderApp();
+
+        if (sb) {
+          try {
+            await sb.from('tasks').update({ followup_at: followupAt, status: 'followup' }).eq('id', taskId);
+          } catch (e) {}
+        }
+      }
+
+      async function completeTask(taskId) {
+        if (!currentUser) return;
+        const nowIso = new Date().toISOString();
+
+        workLogs.forEach(w => {
+          if (String(w.task_id) === String(taskId) && !w.ended_at) {
+            w.ended_at = nowIso;
+          }
+        });
+
+        const target = tasks.find(t => String(t.id) === String(taskId));
+        if (target) {
+          target.status = 'completed';
+          target.completed_at = nowIso;
+        }
+        renderApp();
+
+        if (sb) {
+          try {
+            await sb.rpc('complete_task', { p_task_id: taskId, p_user_id: currentUser.id });
+          } catch (e) {
+            console.warn("RPC complete fallback:", e);
+          }
+        }
+      }
+
+      async function createTask(title, assigneeId, priority = 'normal', workType = 'OTHER', limitMin = 45) {
+        const newTask = {
+          id: `tsk_${Date.now()}`,
+          title,
+          descr: '',
+          status: 'new',
+          priority,
+          work_type: workType,
+          assignee: assigneeId || (currentUser ? currentUser.id : 'usr_manish'),
+          creator: currentUser ? currentUser.id : 'usr_manish',
+          acked: true,
+          limit_min: parseInt(limitMin, 10) || 45,
+          created_at: new Date().toISOString()
+        };
+        tasks.unshift(newTask);
+        renderApp();
+
+        if (sb) {
+          try {
+            await sb.from('tasks').insert(newTask);
+          } catch (e) {}
+        }
+      }
+
+      async function deleteTask(taskId) {
+        tasks = tasks.filter(t => String(t.id) !== String(taskId));
+        selectedTaskIds.delete(String(taskId));
+        renderApp();
+
+        if (sb) {
+          try {
+            await sb.from('tasks').delete().eq('id', taskId);
+          } catch (e) {}
+        }
+      }
+
+      async function bulkAssign(assigneeId) {
+        if (selectedTaskIds.size === 0 || !assigneeId) return;
+        const ids = Array.from(selectedTaskIds);
+        tasks.forEach(t => {
+          if (selectedTaskIds.has(String(t.id))) t.assignee = assigneeId;
+        });
+        selectedTaskIds.clear();
+        renderApp();
+
+        if (sb) {
+          try {
+            await sb.from('tasks').update({ assignee: assigneeId }).in('id', ids);
+          } catch (e) {}
+        }
+      }
+
+      async function bulkChangeStatus(newStatus) {
+        if (selectedTaskIds.size === 0) return;
+        const ids = Array.from(selectedTaskIds);
+        tasks.forEach(t => {
+          if (selectedTaskIds.has(String(t.id))) t.status = newStatus;
+        });
+        selectedTaskIds.clear();
+        renderApp();
+
+        if (sb) {
+          try {
+            await sb.from('tasks').update({ status: newStatus }).in('id', ids);
+          } catch (e) {}
+        }
+      }
+
+      async function bulkDelete() {
+        if (selectedTaskIds.size === 0) return;
+        if (!confirm(`Delete ${selectedTaskIds.size} selected tasks?`)) return;
+        const ids = Array.from(selectedTaskIds);
+        tasks = tasks.filter(t => !selectedTaskIds.has(String(t.id)));
+        selectedTaskIds.clear();
+        renderApp();
+
+        if (sb) {
+          try {
+            await sb.from('tasks').delete().in('id', ids);
+          } catch (e) {}
+        }
+      }
+
+      // Payment Actions
+      async function recordPayment(taskName, amount, notes = '') {
+        if (!taskName || !amount || !currentUser) return;
+        const newPay = {
+          id: `pay_${Date.now()}`,
+          user_id: String(currentUser.id),
+          task_name: taskName,
+          amount: parseFloat(amount) || 0,
+          notes: notes || '',
+          created_at: new Date().toISOString()
+        };
+        paymentSheet.unshift(newPay);
+        renderApp();
+
+        if (sb) {
+          try {
+            await sb.from('payment_sheet').insert(newPay);
+          } catch (e) {}
+        }
+      }
+
+      async function updatePayment(id, taskName, amount, notes) {
+        const item = paymentSheet.find(p => String(p.id) === String(id));
+        if (!item) return;
+        item.task_name = taskName;
+        item.amount = parseFloat(amount) || 0;
+        if (notes !== undefined) item.notes = notes;
+        editingPaymentId = null;
+        renderApp();
+
+        if (sb) {
+          try {
+            await sb.from('payment_sheet').update({ task_name: taskName, amount: item.amount, notes: item.notes }).eq('id', id);
+          } catch (e) {}
+        }
+      }
+
+      async function deletePayment(id) {
+        if (!confirm('Are you sure you want to delete this payment record?')) return;
+        paymentSheet = paymentSheet.filter(p => String(p.id) !== String(id));
+        renderApp();
+
+        if (sb) {
+          try {
+            await sb.from('payment_sheet').delete().eq('id', id);
+          } catch (e) {}
+        }
+      }
+
+      function exportPaymentSheetCSV() {
+        if (paymentSheet.length === 0) return;
+        let csv = "ID,User ID,Task Name,Amount (INR),Notes,Date\n";
+        paymentSheet.forEach(p => {
+          csv += `"${p.id}","${p.user_id}","${(p.task_name || '').replace(/"/g, '""')}","${p.amount}","${(p.notes || '').replace(/"/g, '""')}","${p.created_at}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `payment_sheet_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      // Authentication
+      function loginUser(userId, password) {
+        loginError = '';
+        const target = profiles.find(p => String(p.id) === String(userId)) || DEFAULT_PROFILES.find(p => String(p.id) === String(userId));
+        if (!target) {
+          loginError = 'Please choose a member from the team roster.';
+          renderApp();
+          return false;
+        }
+
+        const isSuper = target.role === 'super_admin' || target.id === 'usr_superadmin';
+        const expectedPassword = isSuper ? SUPER_ADMIN_PASSWORD : UNIVERSAL_PASSWORD;
+
+        if (password === expectedPassword) {
+          currentUser = target;
+          localStorage.setItem('taskqueue_logged_user', JSON.stringify(currentUser));
+          localStorage.setItem('taskqueue_user_id', currentUser.id);
+          loginError = '';
+          renderApp();
+          return true;
+        } else {
+          loginError = isSuper
+            ? 'Incorrect password. Super Admin password is Admin@123'
+            : `Incorrect password for ${target.name}. Please enter Abcd@123`;
+          renderApp();
+          return false;
+        }
+      }
+
+      function logoutUser() {
+        currentUser = null;
+        localStorage.removeItem('taskqueue_logged_user');
+        localStorage.removeItem('taskqueue_user_id');
+        loginError = '';
+        renderApp();
+      }
+
+      // Main Render
+      function renderApp() {
+        const app = document.getElementById('app');
+        if (!app) return;
+
+        try {
+          if (!currentUser) {
+            renderLoginScreen(app);
+            return;
+          }
+          renderWorkspace(app);
+        } catch (renderError) {
+          console.error("Render catch:", renderError);
+          app.innerHTML = `
+            <div class="min-h-screen flex items-center justify-center p-6 text-center">
+              <div class="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl max-w-md w-full border border-slate-200 dark:border-slate-800">
+                <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Restoring Workspace...</h2>
+                <p class="text-xs text-slate-500 mb-4">Click below to reset and reload your view.</p>
+                <button onclick="localStorage.clear(); location.reload();" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold">
+                  Reset & Reload TaskQueue
+                </button>
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      // Login Screen
+      function renderLoginScreen(app) {
+        const activeSelectedUser = profiles.find(p => p.id === selectedLoginUserId) || profiles[0] || DEFAULT_PROFILES[0];
+
+        app.innerHTML = `
+          <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/20">
+                  ${ICONS.layers}
+                </div>
+                <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">TaskQueue</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-mono text-slate-600 dark:text-slate-400 mr-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span id="ist-live-clock" class="font-semibold text-slate-900 dark:text-slate-200">${getISTString()}</span>
+                </div>
+                <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <button onclick="window.setThemeMode('light')" title="Light Mode" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'light' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                    ${ICONS.sun}
+                  </button>
+                  <button onclick="window.setThemeMode('dark')" title="Dark Mode" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'dark' ? 'bg-slate-700 text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                    ${ICONS.moon}
+                  </button>
+                  <button onclick="window.setThemeMode('system')" title="System Mode" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'system' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                    ${ICONS.monitor}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main class="flex-1 flex items-center justify-center p-4 sm:p-6 w-full">
+            <div class="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <div class="h-2 bg-gradient-to-r from-indigo-500 via-sky-500 to-emerald-500"></div>
+
+              <div class="p-6 sm:p-8">
+                <div class="text-center mb-6">
+                  <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-3 shadow-inner">
+                    ${ICONS.lock}
+                  </div>
+                  <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Team Workspace Sign In</h2>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Select your name and enter password (<code class="font-mono text-indigo-600 font-bold">Admin@123</code> for Super Admin, <code class="font-mono text-indigo-600 font-bold">Abcd@123</code> for members)
+                  </p>
+                </div>
+
+                <div class="mb-5">
+                  <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                    Choose Your Name:
+                  </span>
+                  <div class="grid grid-cols-2 gap-2">
+                    ${profiles.map(p => `
+                      <button
+                        type="button"
+                        onclick="window.selectLoginUser('${p.id}')"
+                        class="p-2.5 rounded-xl border text-left text-xs font-bold transition-all flex items-center gap-2 ${selectedLoginUserId === p.id ? 'bg-indigo-50 dark:bg-indigo-950/70 border-indigo-600 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20 shadow-sm' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-400'}">
+                        <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white font-extrabold text-[10px] flex items-center justify-center shrink-0">
+                          ${p.name.slice(0, 1)}
+                        </span>
+                        <span class="truncate">${p.name}</span>
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+
+                ${loginError ? `
+                  <div class="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                    ${ICONS.alert}
+                    <span>${loginError}</span>
+                  </div>
+                ` : ''}
+
+                <form id="login-form" onsubmit="window.handleLoginSubmit(event)" class="space-y-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Selected Member
+                    </label>
+                    <div class="relative">
+                      <select id="login-user-select" onchange="window.selectLoginUser(this.value)"
+                        class="w-full pl-3 pr-8 py-2.5 text-xs font-bold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        ${profiles.map(p => `
+                          <option value="${p.id}" ${selectedLoginUserId === p.id ? 'selected' : ''}>${p.name}</option>
+                        `).join('')}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Password
+                    </label>
+                    <div class="relative">
+                      <input id="login-password-input" type="password" required value="${selectedLoginUserId === 'usr_superadmin' ? 'Admin@123' : 'Abcd@123'}"
+                        class="w-full px-3 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                  </div>
+
+                  <button type="submit" class="btn-action w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+                    ${ICONS.lock}
+                    <span>Sign In to Workspace</span>
+                  </button>
+                </form>
+
+                <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+                  <span class="text-[11px] text-slate-400">Super Admin: <b class="font-mono text-slate-600 dark:text-slate-300">Admin@123</b> · Members: <b class="font-mono text-slate-600 dark:text-slate-300">Abcd@123</b></span>
+                </div>
+              </div>
+            </div>
+          </main>
+        `;
+      }
+
+      // Workspace Component
+      function renderWorkspace(app) {
+        const isAdmin = currentUser.role === 'admin' || currentUser.role === 'super_admin';
+        let baseTasks = tasks;
+        if (!isAdmin && currentFilter !== 'all_team') {
+          baseTasks = tasks.filter(t => String(t.assignee) === String(currentUser.id));
+        }
+
+        const incompleteTasks = baseTasks.filter(t => t.status !== 'completed');
+        const liveTasks = baseTasks.filter(t => t.status === 'running');
+        const urgentTasks = baseTasks.filter(t => t.priority === 'urgent' && t.status !== 'completed' && t.status !== 'running');
+        const notStartedTasks = baseTasks.filter(t => t.status === 'new');
+        const followupTasks = baseTasks.filter(t => t.status === 'followup');
+        const completedTasks = baseTasks.filter(t => t.status === 'completed');
+
+        const uanTasks = baseTasks.filter(t => (t.work_type || 'OTHER') === 'UAN TIC');
+        const receptionTasks = baseTasks.filter(t => t.work_type === 'RECEPTION');
+        const otherTasks = baseTasks.filter(t => (t.work_type || 'OTHER') === 'OTHER');
+
+        const filterByWorkType = (list) => {
+          if (currentWorkTypeFilter === 'ALL') return list;
+          return list.filter(t => (t.work_type || 'OTHER') === currentWorkTypeFilter);
+        };
+
+        const displayedLiveTasks = filterByWorkType(liveTasks);
+        const displayedUrgentTasks = filterByWorkType(urgentTasks);
+        const displayedNotStartedTasks = filterByWorkType(notStartedTasks);
+
+        let tabTasks = [];
+        if (currentFilter === 'total') tabTasks = incompleteTasks;
+        else if (currentFilter === 'live') tabTasks = liveTasks;
+        else if (currentFilter === 'urgent') tabTasks = urgentTasks;
+        else if (currentFilter === 'followup') tabTasks = followupTasks;
+        else if (currentFilter === 'completed') tabTasks = completedTasks;
+        else if (currentFilter === 'all_team') tabTasks = tasks.filter(t => t.status !== 'completed');
+        else tabTasks = incompleteTasks;
+
+        let displayedTasks = filterByWorkType(tabTasks);
+        const allDisplayedSelected = displayedTasks.length > 0 && displayedTasks.every(t => selectedTaskIds.has(String(t.id)));
+
+        app.innerHTML = `
+          <!-- HEADER -->
+          <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/20">
+                    ${ICONS.layers}
+                  </div>
+                  <div class="leading-tight">
+                    <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">TaskQueue</span>
+                  </div>
+                </div>
+                <div class="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-mono text-slate-600 dark:text-slate-400">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>IST:</span>
+                  <span id="ist-live-clock" class="font-semibold text-slate-900 dark:text-slate-200">${getISTString()}</span>
+                </div>
+              </div>
+
+              <!-- Header Actions -->
+              <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="window.openPaymentSheet()" class="btn-action flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold border border-emerald-200 dark:border-emerald-800">
+                  ${ICONS.receipt}
+                  <span>Payment Sheet</span>
+                </button>
+
+                <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <button onclick="window.setThemeMode('light')" title="Light Mode" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'light' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                    ${ICONS.sun}
+                  </button>
+                  <button onclick="window.setThemeMode('dark')" title="Dark Mode" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'dark' ? 'bg-slate-700 text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                    ${ICONS.moon}
+                  </button>
+                  <button onclick="window.setThemeMode('system')" title="System Mode" class="p-1.5 rounded-md text-xs font-medium transition ${currentThemeMode === 'system' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}">
+                    ${ICONS.monitor}
+                  </button>
+                </div>
+
+                <!-- User Profile Display: ONLY Name Displayed, Super Admin Badge only for Super Admin -->
+                <div class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+                  <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-xs uppercase">
+                    ${(currentUser.name || 'U').slice(0, 2)}
+                  </div>
+                  <div class="text-left hidden sm:block">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-xs font-bold text-slate-900 dark:text-slate-100 leading-none">${currentUser.name}</span>
+                      ${currentUser.role === 'super_admin' ? `<span class="text-[9px] px-1.5 py-0.5 rounded font-bold bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-800">Super Admin Access</span>` : ''}
+                    </div>
+                    <div id="user-worktime-display" class="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                      ${formatDuration(getUserWorkTimeToday(currentUser.id))} today
+                    </div>
+                  </div>
+
+                  <button onclick="window.logoutUser()" title="Log out" class="btn-action flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 transition-colors ml-1">
+                    ${ICONS.logout}
+                    <span class="hidden sm:inline">Log Out</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
+            <!-- 1. PRIMARY 8 KPI CARDS -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 mb-5">
+              <!-- KPI 1: LIVE TASKS -->
+              <button onclick="window.setTab('live')" class="btn-action p-3 rounded-2xl border text-left transition-all shadow-sm flex flex-col justify-between ${currentFilter === 'live' ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500/30' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-emerald-400'}">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-extrabold uppercase tracking-wider ${currentFilter === 'live' ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'}">Live Tasks</span>
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                </div>
+                <div class="mt-2 text-2xl font-black font-mono">${liveTasks.length}</div>
+                <div class="text-[10px] opacity-80 mt-0.5 truncate">Running timer</div>
+              </button>
+
+              <!-- KPI 2: MEMBERS (OPENS ROSTER MODAL) -->
+              <button onclick="window.openMembersRosterModal()" class="btn-action p-3 rounded-2xl border text-left transition-all shadow-sm flex flex-col justify-between bg-indigo-50/70 hover:bg-indigo-100/70 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 border-indigo-200 dark:border-indigo-800/80 text-slate-900 dark:text-slate-100">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">Members</span>
+                  ${ICONS.users}
+                </div>
+                <div class="mt-2 text-2xl font-black font-mono text-indigo-700 dark:text-indigo-300">${profiles.length}</div>
+                <div class="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5 truncate">Tap for roster →</div>
+              </button>
+
+              <!-- KPI 3: UAN TIC -->
+              <button onclick="window.setWorkTypeFilter(currentWorkTypeFilter === 'UAN TIC' ? 'ALL' : 'UAN TIC')" class="btn-action p-3 rounded-2xl border text-left transition-all shadow-sm flex flex-col justify-between ${currentWorkTypeFilter === 'UAN TIC' ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-500/30' : 'bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-900/60 text-slate-800 dark:text-slate-200 hover:border-indigo-400'}">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider ${currentWorkTypeFilter === 'UAN TIC' ? 'text-indigo-100' : 'text-indigo-600 dark:text-indigo-400'}">UAN TIC</span>
+                <div class="mt-2 text-2xl font-black font-mono">${uanTasks.length}</div>
+                <div class="text-[10px] opacity-80 mt-0.5 truncate">${uanTasks.filter(t => t.status !== 'completed').length} open</div>
+              </button>
+
+              <!-- KPI 4: RECEPTION -->
+              <button onclick="window.setWorkTypeFilter(currentWorkTypeFilter === 'RECEPTION' ? 'ALL' : 'RECEPTION')" class="btn-action p-3 rounded-2xl border text-left transition-all shadow-sm flex flex-col justify-between ${currentWorkTypeFilter === 'RECEPTION' ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500/30' : 'bg-white dark:bg-slate-900 border-emerald-200 dark:border-emerald-900/60 text-slate-800 dark:text-slate-200 hover:border-emerald-400'}">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider ${currentWorkTypeFilter === 'RECEPTION' ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'}">Reception</span>
+                <div class="mt-2 text-2xl font-black font-mono">${receptionTasks.length}</div>
+                <div class="text-[10px] opacity-80 mt-0.5 truncate">${receptionTasks.filter(t => t.status !== 'completed').length} open</div>
+              </button>
+
+              <!-- KPI 5: OTHER -->
+              <button onclick="window.setWorkTypeFilter(currentWorkTypeFilter === 'OTHER' ? 'ALL' : 'OTHER')" class="btn-action p-3 rounded-2xl border text-left transition-all shadow-sm flex flex-col justify-between ${currentWorkTypeFilter === 'OTHER' ? 'bg-slate-800 text-white border-slate-800 ring-2 ring-slate-500/30' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-slate-400'}">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider ${currentWorkTypeFilter === 'OTHER' ? 'text-slate-300' : 'text-slate-500 dark:text-slate-400'}">Other Tasks</span>
+                <div class="mt-2 text-2xl font-black font-mono">${otherTasks.length}</div>
+                <div class="text-[10px] opacity-80 mt-0.5 truncate">${otherTasks.filter(t => t.status !== 'completed').length} open</div>
+              </button>
+
+              <!-- KPI 6: FOLLOW-UP -->
+              <button onclick="window.setTab('followup')" class="btn-action p-3 rounded-2xl border text-left transition-all shadow-sm flex flex-col justify-between ${currentFilter === 'followup' ? 'bg-amber-600 text-white border-amber-600 ring-2 ring-amber-500/30' : 'bg-white dark:bg-slate-900 border-amber-200 dark:border-amber-900/60 text-slate-800 dark:text-slate-200 hover:border-amber-400'}">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider ${currentFilter === 'followup' ? 'text-amber-100' : 'text-amber-600 dark:text-amber-400'}">Follow-up</span>
+                <div class="mt-2 text-2xl font-black font-mono">${followupTasks.length}</div>
+                <div class="text-[10px] opacity-80 mt-0.5 truncate">Paused sheet</div>
+              </button>
+
+              <!-- KPI 7: COMPLETED -->
+              <button onclick="window.setTab('completed')" class="btn-action p-3 rounded-2xl border text-left transition-all shadow-sm flex flex-col justify-between ${currentFilter === 'completed' ? 'bg-violet-600 text-white border-violet-600 ring-2 ring-violet-500/30' : 'bg-white dark:bg-slate-900 border-violet-200 dark:border-violet-900/60 text-slate-800 dark:text-slate-200 hover:border-violet-400'}">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider ${currentFilter === 'completed' ? 'text-violet-100' : 'text-violet-600 dark:text-violet-400'}">Completed</span>
+                <div class="mt-2 text-2xl font-black font-mono">${completedTasks.length}</div>
+                <div class="text-[10px] opacity-80 mt-0.5 truncate">Done today</div>
+              </button>
+
+              <!-- KPI 8: REPORTS -->
+              <button onclick="window.openReportsModal()" class="btn-action p-3 rounded-2xl border text-left transition-all shadow-sm flex flex-col justify-between bg-violet-50/70 hover:bg-violet-100/70 dark:bg-violet-950/40 dark:hover:bg-violet-900/40 border-violet-200 dark:border-violet-800/80 text-slate-900 dark:text-slate-100">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-extrabold uppercase tracking-wider text-violet-700 dark:text-violet-400">Reports</span>
+                  ${ICONS.receipt}
+                </div>
+                <div class="mt-2 text-xs font-bold text-violet-800 dark:text-violet-300">Daily / Monthly</div>
+                <div class="text-[10px] text-violet-600 dark:text-violet-400 font-semibold mt-0.5 truncate">Tap to open →</div>
+              </button>
+            </div>
+
+            <!-- 2. FAST DISPATCH BAR -->
+            <div class="mb-5 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <form id="fast-dispatch-form" onsubmit="window.handleFastDispatch(event)" class="flex flex-col sm:flex-row items-center gap-2.5">
+                <div class="relative flex-1 w-full">
+                  <input id="dispatch-title" type="text" placeholder="Assign new task / enter task title..." required
+                    class="w-full pl-3 pr-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                </div>
+
+                <select id="dispatch-assignee" class="w-full sm:w-40 py-2 px-3 text-xs font-semibold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
+                  ${profiles.map(p => `
+                    <option value="${p.id}" ${String(p.id) === String(currentUser.id) ? 'selected' : ''}>${p.name}</option>
+                  `).join('')}
+                </select>
+
+                <select id="dispatch-worktype" class="w-full sm:w-36 py-2 px-3 text-xs font-bold rounded-xl bg-slate-50 dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900 text-indigo-700 dark:text-indigo-400">
+                  <option value="UAN TIC">UAN TIC</option>
+                  <option value="RECEPTION">RECEPTION</option>
+                  <option value="OTHER">OTHER</option>
+                </select>
+
+                <select id="dispatch-priority" class="w-full sm:w-28 py-2 px-3 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
+                  <option value="normal">Normal</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+
+                <input id="dispatch-budget" type="number" placeholder="Min" defaultValue="45" class="w-full sm:w-20 py-2 px-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100" />
+
+                <button type="submit" class="btn-action w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap">
+                  ${ICONS.plus}
+                  <span>Dispatch</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- 3. MAIN TASK DISPLAY -->
+            ${currentFilter === 'front' ? `
+              <div class="space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                      Front Panel (Live, Urgent & Not Started Tasks)
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <button onclick="window.setWorkTypeFilter('ALL')" class="btn-action px-3 py-1 rounded-xl text-xs font-bold transition-all ${currentWorkTypeFilter === 'ALL' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'}">
+                      All Tasks
+                    </button>
+                    <button onclick="window.setWorkTypeFilter('UAN TIC')" class="btn-action px-3 py-1 rounded-xl text-xs font-bold transition-all ${currentWorkTypeFilter === 'UAN TIC' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100'}">
+                      UAN TIC Tasks (${uanTasks.length})
+                    </button>
+                    <button onclick="window.setWorkTypeFilter('RECEPTION')" class="btn-action px-3 py-1 rounded-xl text-xs font-bold transition-all ${currentWorkTypeFilter === 'RECEPTION' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100'}">
+                      Reception Tasks (${receptionTasks.length})
+                    </button>
+                    <button onclick="window.setWorkTypeFilter('OTHER')" class="btn-action px-3 py-1 rounded-xl text-xs font-bold transition-all ${currentWorkTypeFilter === 'OTHER' ? 'bg-slate-700 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200'}">
+                      Other Tasks (${otherTasks.length})
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Section A: Live Tasks -->
+                ${displayedLiveTasks.length > 0 ? `
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between px-1">
+                      <span class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                        Live Active Tasks (${displayedLiveTasks.length})
+                      </span>
+                    </div>
+                    <div class="bg-white dark:bg-slate-900 rounded-xl border border-emerald-300 dark:border-emerald-800/60 shadow-sm overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                      ${displayedLiveTasks.map(t => renderTaskRow(t, isAdmin)).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+
+                <!-- Section B: Urgent Priority Tasks -->
+                ${displayedUrgentTasks.length > 0 ? `
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between px-1">
+                      <span class="text-xs font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                        ${ICONS.alert}
+                        Urgent Priority Tasks (${displayedUrgentTasks.length})
+                      </span>
+                    </div>
+                    <div class="bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-900/60 shadow-sm overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                      ${displayedUrgentTasks.map(t => renderTaskRow(t, isAdmin)).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+
+                <!-- Section C: Not Started Tasks -->
+                ${displayedNotStartedTasks.length > 0 ? `
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between px-1">
+                      <span class="text-xs font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+                        Not Started Tasks (${displayedNotStartedTasks.length})
+                      </span>
+                    </div>
+                    <div class="bg-white dark:bg-slate-900 rounded-xl border border-sky-200 dark:border-sky-900/60 shadow-sm overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                      ${displayedNotStartedTasks.map(t => renderTaskRow(t, isAdmin)).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${displayedLiveTasks.length === 0 && displayedUrgentTasks.length === 0 && displayedNotStartedTasks.length === 0 ? `
+                  <div class="p-10 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 mx-auto flex items-center justify-center mb-2">
+                      ${ICONS.check}
+                    </div>
+                    <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200">No Live, Urgent, or Not Started Tasks</h4>
+                    <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                      All immediate actions are handled. Click <b>"Total Tasks"</b> to view all ${incompleteTasks.length} incomplete tasks.
+                    </p>
+                  </div>
+                ` : ''}
+              </div>
+            ` : `
+              <!-- Standard List View -->
+              <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div class="px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <div class="flex items-center gap-3">
+                    <input type="checkbox" onchange="window.toggleSelectAll(this.checked)" ${allDisplayedSelected ? 'checked' : ''} class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-600" />
+                    <span>Task Name</span>
+                  </div>
+                  <div class="flex items-center gap-4 sm:gap-8">
+                    ${isAdmin ? `<span class="hidden sm:inline">Assigned To</span>` : ''}
+                    <span class="w-20 text-right">Time</span>
+                    <span class="w-28 text-right">Actions</span>
+                  </div>
+                </div>
+
+                <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                  ${displayedTasks.length === 0 ? `
+                    <div class="py-12 text-center text-slate-400 dark:text-slate-500 text-xs font-medium">
+                      No tasks found in this section.
+                    </div>
+                  ` : displayedTasks.map(task => renderTaskRow(task, isAdmin)).join('')}
+                </div>
+              </div>
+            `}
+          </main>
+
+          <!-- Floating Bulk Action Bar -->
+          ${selectedTaskIds.size > 0 ? `
+            <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 dark:bg-slate-800 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex flex-wrap items-center gap-3">
+              <span class="text-xs font-extrabold bg-indigo-600 px-2 py-0.5 rounded-full">${selectedTaskIds.size} Selected</span>
+              <div class="flex items-center gap-1">
+                <button onclick="window.bulkChangeStatus('new')" class="btn-action px-2.5 py-1 text-xs font-semibold bg-slate-800 hover:bg-slate-700 rounded-lg">Not Started</button>
+                <button onclick="window.bulkChangeStatus('paused')" class="btn-action px-2.5 py-1 text-xs font-semibold bg-amber-600/80 hover:bg-amber-600 rounded-lg">Pause</button>
+                <button onclick="window.bulkChangeStatus('completed')" class="btn-action px-2.5 py-1 text-xs font-semibold bg-emerald-600/80 hover:bg-emerald-600 rounded-lg">Complete</button>
+              </div>
+              <div class="flex items-center gap-1.5 pl-2 border-l border-slate-700">
+                <select onchange="window.bulkAssign(this.value)" class="text-xs bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-slate-200">
+                  <option value="">Assign To...</option>
+                  ${profiles.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                </select>
+              </div>
+              <button onclick="window.bulkDelete()" class="btn-action p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg ml-2" title="Delete selected">
+                ${ICONS.trash}
+              </button>
+              <button onclick="window.clearSelected()" class="text-xs text-slate-400 hover:text-white ml-1">Cancel</button>
+            </div>
+          ` : ''}
+
+          <!-- Modals -->
+          ${showPaymentModal ? renderPaymentModal() : ''}
+          ${showMembersRosterModal ? renderMembersRosterModal() : ''}
+          ${drilldownMemberId ? renderMemberTasksModal(drilldownMemberId) : ''}
+          ${inspectingTaskId ? renderTaskDetailModal(inspectingTaskId) : ''}
+          ${showReportsModal ? renderReportsModal() : ''}
+        `;
+      }
+
+      function renderTaskRow(task, isAdmin) {
+        const isSelected = selectedTaskIds.has(String(task.id));
+        const isRunning = task.status === 'running';
+        const isCompleted = task.status === 'completed';
+        const isUrgent = task.priority === 'urgent';
+        const durationSec = getTaskDuration(task.id);
+        const assigneeObj = profiles.find(p => String(p.id) === String(task.assignee));
+        const assigneeName = assigneeObj ? assigneeObj.name : 'Unassigned';
+
+        const wt = task.work_type || 'OTHER';
+        let wtBadgeClass = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+        if (wt === 'UAN TIC') wtBadgeClass = 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800';
+        else if (wt === 'RECEPTION') wtBadgeClass = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800';
+
+        return `
+          <div class="px-4 py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition ${isRunning ? 'bg-emerald-50/40 dark:bg-emerald-950/20' : ''}">
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+              <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="window.toggleSelectTask('${task.id}', this.checked)"
+                class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-600 shrink-0" />
+
+              <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${wtBadgeClass}">
+                ${wt}
+              </span>
+
+              ${task.status === 'followup' ? `
+                <span class="text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-900/60 shrink-0 flex items-center gap-1">
+                  ${ICONS.clock}
+                  <span>Follow-up${task.followup_at ? `: ${new Date(task.followup_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}` : ' (Time not set)'}</span>
+                </span>
+              ` : ''}
+
+              ${isUrgent ? `<span class="shrink-0">${ICONS.alert}</span>` : ''}
+
+              <div class="flex-1 min-w-0">
+                <button onclick="window.openTaskDetail('${task.id}')" class="text-left font-semibold text-xs sm:text-sm text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 truncate block w-full ${isCompleted ? 'line-through text-slate-400 dark:text-slate-500' : ''}">
+                  ${task.title}
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-4 sm:gap-8 shrink-0">
+              ${isAdmin ? `
+                <div class="hidden sm:block text-right w-28 truncate">
+                  <span class="text-xs text-slate-600 dark:text-slate-400 font-medium">${assigneeName}</span>
+                </div>
+              ` : ''}
+
+              <div class="w-20 text-right">
+                <span id="task-timer-${task.id}" class="text-xs font-mono font-bold ${isRunning ? 'text-emerald-600 dark:text-emerald-400 animate-pulse' : 'text-slate-500 dark:text-slate-400'}">
+                  ${formatDuration(durationSec)}
+                </span>
+              </div>
+
+              <div class="w-28 flex items-center justify-end gap-1.5">
+                ${isCompleted ? `
+                  <span class="text-[11px] font-bold text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-md bg-violet-50 dark:bg-violet-950/60">Done</span>
+                ` : `
+                  ${isRunning ? `
+                    <button onclick="window.pauseTask('${task.id}')" title="Pause (Move to Follow-up)" class="btn-action p-1.5 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 hover:bg-amber-200">
+                      ${ICONS.pause}
+                    </button>
+                  ` : `
+                    <button onclick="window.startTask('${task.id}')" title="Start Task" class="btn-action p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200">
+                      ${ICONS.play}
+                    </button>
+                  `}
+                  <button onclick="window.completeTask('${task.id}')" title="Mark Complete" class="btn-action p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-violet-100 hover:text-violet-700">
+                    ${ICONS.check}
+                  </button>
+                `}
+                <button onclick="window.deleteTask('${task.id}')" title="Delete Task" class="btn-action p-1.5 rounded-lg text-slate-400 hover:bg-rose-100 hover:text-rose-600">
+                  ${ICONS.trash}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Members Roster Modal
+      function renderMembersRosterModal() {
+        return `
+          <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[88vh]">
+              <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    ${ICONS.users}
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-slate-900 dark:text-slate-100 text-lg">Team Members KPI (${profiles.length})</h3>
+                    <p class="text-xs text-slate-500">Tap any member to view their active task roster and detailed reports</p>
+                  </div>
+                </div>
+                <button onclick="window.closeMembersRosterModal()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl">
+                  ${ICONS.close}
+                </button>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 my-4 overflow-y-auto flex-1 p-1">
+                ${profiles.map(member => {
+                  const memberTasks = tasks.filter(t => String(t.assignee) === String(member.id));
+                  const liveCount = memberTasks.filter(t => t.status === 'running').length;
+                  const urgentCount = memberTasks.filter(t => t.priority === 'urgent' && t.status !== 'completed' && t.status !== 'running').length;
+                  const notStartedCount = memberTasks.filter(t => t.status === 'new').length;
+                  const completedCount = memberTasks.filter(t => t.status === 'completed').length;
+                  const workSec = getUserWorkTimeToday(member.id);
+
+                  return `
+                    <div onclick="window.closeMembersRosterModal(); window.openMemberTasks('${member.id}')"
+                      class="cursor-pointer p-4 rounded-2xl border text-left transition-all bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/80 hover:border-indigo-500 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md">
+                      <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2.5">
+                          <span class="w-8 h-8 rounded-xl bg-indigo-600 text-white font-extrabold text-xs flex items-center justify-center">
+                            ${member.name.slice(0, 2).toUpperCase()}
+                          </span>
+                          <div>
+                            <h4 class="text-sm font-bold text-slate-900 dark:text-white">${member.name}</h4>
+                            <span class="text-[10px] text-slate-400 font-mono">${memberTasks.length} assigned tasks</span>
+                          </div>
+                        </div>
+                        ${liveCount > 0 ? `
+                          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                            Live
+                          </span>
+                        ` : ''}
+                      </div>
+
+                      <div class="grid grid-cols-4 gap-1 py-2 border-y border-slate-200/60 dark:border-slate-700/60 text-center">
+                        <div>
+                          <span class="text-[9px] uppercase font-bold text-slate-400 block">Live</span>
+                          <span class="text-xs font-bold font-mono ${liveCount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'}">${liveCount}</span>
+                        </div>
+                        <div>
+                          <span class="text-[9px] uppercase font-bold text-slate-400 block">Urgent</span>
+                          <span class="text-xs font-bold font-mono ${urgentCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-400'}">${urgentCount}</span>
+                        </div>
+                        <div>
+                          <span class="text-[9px] uppercase font-bold text-slate-400 block">New</span>
+                          <span class="text-xs font-bold font-mono text-sky-600 dark:text-sky-400">${notStartedCount}</span>
+                        </div>
+                        <div>
+                          <span class="text-[9px] uppercase font-bold text-slate-400 block">Done</span>
+                          <span class="text-xs font-bold font-mono text-violet-600 dark:text-violet-400">${completedCount}</span>
+                        </div>
+                      </div>
+
+                      <div class="mt-3 flex items-center justify-between text-xs">
+                        <span class="text-slate-500 font-medium">Work Today:</span>
+                        <span class="font-mono font-bold text-indigo-600 dark:text-indigo-400">${formatDuration(workSec)}</span>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Member Drilldown Tasks Modal
+      function renderMemberTasksModal(memberId) {
+        const member = profiles.find(p => String(p.id) === String(memberId));
+        if (!member) return '';
+
+        const memberTasks = tasks.filter(t => String(t.assignee) === String(member.id));
+        const liveCount = memberTasks.filter(t => t.status === 'running').length;
+        const urgentCount = memberTasks.filter(t => t.priority === 'urgent' && t.status !== 'completed' && t.status !== 'running').length;
+        const notStartedCount = memberTasks.filter(t => t.status === 'new').length;
+        const completedCount = memberTasks.filter(t => t.status === 'completed').length;
+        const workSec = getUserWorkTimeToday(member.id);
+
+        return `
+          <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[88vh] overflow-hidden">
+              <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-800/60">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white font-extrabold text-base flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
+                    ${member.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h3 class="text-lg font-bold text-slate-900 dark:text-white">${member.name}</h3>
+                      ${liveCount > 0 ? `
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 flex items-center gap-1">
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                          Live
+                        </span>
+                      ` : ''}
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                      Roster & Tasks · Click any task to inspect details
+                    </p>
+                  </div>
+                </div>
+                <button onclick="window.closeMemberTasks()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl">
+                  ${ICONS.close}
+                </button>
+              </div>
+
+              <div class="p-3 bg-slate-100/60 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs">
+                <div class="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">Total</span>
+                  <span class="text-base font-black font-mono text-slate-900 dark:text-white">${memberTasks.length}</span>
+                </div>
+                <div class="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">Live</span>
+                  <span class="text-base font-black font-mono ${liveCount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'}">${liveCount}</span>
+                </div>
+                <div class="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">Urgent</span>
+                  <span class="text-base font-black font-mono ${urgentCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-400'}">${urgentCount}</span>
+                </div>
+                <div class="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">New</span>
+                  <span class="text-base font-black font-mono text-sky-600 dark:text-sky-400">${notStartedCount}</span>
+                </div>
+                <div class="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">Done</span>
+                  <span class="text-base font-black font-mono text-violet-600 dark:text-violet-400">${completedCount}</span>
+                </div>
+                <div class="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 block">Work Today</span>
+                  <span class="text-xs font-bold font-mono text-indigo-600 dark:text-indigo-400 block mt-0.5 truncate">${formatDuration(workSec)}</span>
+                </div>
+              </div>
+
+              <div class="flex-1 overflow-y-auto p-4 space-y-2">
+                ${memberTasks.length === 0 ? `
+                  <div class="py-12 text-center text-slate-400 text-xs">
+                    No tasks assigned to ${member.name} yet.
+                  </div>
+                ` : `
+                  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700">
+                    ${memberTasks.map(task => renderTaskRow(task, false)).join('')}
+                  </div>
+                `}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Team Reports Modal (Daily & Monthly)
+      function renderReportsModal() {
+        const isMonthly = reportMode === 'monthly';
+        const filterKey = isMonthly ? reportMonth : reportDate;
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const yesterdayObj = new Date();
+        yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+        const yesterdayStr = yesterdayObj.toISOString().slice(0, 10);
+
+        return `
+          <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[88vh]">
+              <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-950 text-violet-600 dark:text-violet-400 flex items-center justify-center">
+                    ${ICONS.receipt}
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-slate-900 dark:text-slate-100 text-lg">Team Work Reports & Audit</h3>
+                    <p class="text-xs text-slate-500">Completed tasks, pause timings, active work & empty time per member</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button onclick="window.exportReportCSV()" class="btn-action flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-200">
+                    ${ICONS.download}
+                    <span>Export CSV</span>
+                  </button>
+                  <button onclick="window.closeReportsModal()" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg">
+                    ${ICONS.close}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filter Bar -->
+              <div class="my-3 p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <div class="flex rounded-lg bg-slate-200 dark:bg-slate-700 p-0.5">
+                    <button onclick="window.setReportMode('daily')" class="px-3 py-1 rounded-md font-bold transition ${!isMonthly ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm' : 'text-slate-600 dark:text-slate-300'}">
+                      Daily Report
+                    </button>
+                    <button onclick="window.setReportMode('monthly')" class="px-3 py-1 rounded-md font-bold transition ${isMonthly ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm' : 'text-slate-600 dark:text-slate-300'}">
+                      Monthly Section
+                    </button>
+                  </div>
+
+                  ${!isMonthly ? `
+                    <button onclick="window.setReportDate('${todayStr}')" class="px-2.5 py-1 rounded-lg font-bold border ${reportDate === todayStr ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}">
+                      Today
+                    </button>
+                    <button onclick="window.setReportDate('${yesterdayStr}')" class="px-2.5 py-1 rounded-lg font-bold border ${reportDate === yesterdayStr ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}">
+                      Yesterday
+                    </button>
+                    <div class="flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <span class="text-[10px] text-slate-400">Date:</span>
+                      <input type="date" value="${reportDate}" onchange="window.setReportDate(this.value)" class="bg-transparent text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none" />
+                    </div>
+                  ` : `
+                    <div class="flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <span class="text-[10px] text-slate-400">Month:</span>
+                      <input type="month" value="${reportMonth}" onchange="window.setReportMonth(this.value)" class="bg-transparent text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none" />
+                    </div>
+                  `}
+                </div>
+
+                <span class="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                  Reporting Period: <b class="text-slate-900 dark:text-white">${filterKey}</b>
+                </span>
+              </div>
+
+              <div class="flex-1 overflow-y-auto space-y-3 p-1">
+                ${profiles.map(member => {
+                  const memberCompletedTasks = tasks.filter(t => {
+                    if (String(t.assignee) !== String(member.id)) return false;
+                    if (t.status !== 'completed') return false;
+                    const completedDate = t.completed_at || t.created_at;
+                    return isMonthly ? completedDate.startsWith(reportMonth) : completedDate.startsWith(reportDate);
+                  });
+
+                  const memberLogs = workLogs.filter(w => {
+                    if (String(w.user_id) !== String(member.id)) return false;
+                    return isMonthly ? (w.started_at || '').startsWith(reportMonth) : (w.started_at || '').startsWith(reportDate);
+                  });
+
+                  const activeWorkSec = memberLogs.reduce((acc, log) => {
+                    const start = new Date(log.started_at).getTime();
+                    const end = log.ended_at ? new Date(log.ended_at).getTime() : Date.now();
+                    return acc + Math.max(0, Math.floor((end - start) / 1000));
+                  }, 0);
+
+                  const pauseLogs = memberLogs.filter(l => l.ended_at);
+                  const totalShiftSec = 8 * 3600;
+                  const emptySec = Math.max(0, totalShiftSec - activeWorkSec);
+
+                  const isExpanded = expandedReportMemberId === member.id;
+
+                  return `
+                    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 overflow-hidden">
+                      <div onclick="window.toggleReportMember('${member.id}')" class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800 transition">
+                        <div class="flex items-center gap-3">
+                          <span class="w-9 h-9 rounded-xl bg-indigo-600 text-white font-extrabold text-xs flex items-center justify-center">
+                            ${member.name.slice(0, 2).toUpperCase()}
+                          </span>
+                          <div>
+                            <h4 class="font-bold text-slate-900 dark:text-white text-sm">${member.name}</h4>
+                            <p class="text-[11px] text-slate-400 font-mono">
+                              ${memberCompletedTasks.length} Completed Tasks · Active: ${formatDuration(activeWorkSec)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div class="flex items-center gap-4 text-xs">
+                          <div class="text-right">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block">Empty Time</span>
+                            <span class="font-mono font-bold text-amber-600 dark:text-amber-400">${formatDuration(emptySec)}</span>
+                          </div>
+                          <div class="text-right">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block">Work Time</span>
+                            <span class="font-mono font-bold text-indigo-600 dark:text-indigo-400">${formatDuration(activeWorkSec)}</span>
+                          </div>
+                          <span class="text-slate-400 text-sm">${isExpanded ? '▲' : '▼'}</span>
+                        </div>
+                      </div>
+
+                      ${isExpanded ? `
+                        <div class="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 space-y-4">
+                          <div>
+                            <h5 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                              ${ICONS.check}
+                              <span>Completed Tasks (${memberCompletedTasks.length})</span>
+                            </h5>
+                            ${memberCompletedTasks.length === 0 ? `
+                              <p class="text-xs text-slate-400 italic">No tasks completed by ${member.name} in this period.</p>
+                            ` : `
+                              <div class="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden">
+                                ${memberCompletedTasks.map(t => `
+                                  <div class="p-2.5 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                    <div class="flex items-center gap-2">
+                                      <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">${t.work_type || 'OTHER'}</span>
+                                      <span class="font-semibold text-slate-800 dark:text-slate-200">${t.title}</span>
+                                    </div>
+                                    <span class="font-mono text-[11px] text-slate-400">${t.completed_at ? new Date(t.completed_at).toLocaleTimeString() : ''}</span>
+                                  </div>
+                                `).join('')}
+                              </div>
+                            `}
+                          </div>
+
+                          <div>
+                            <h5 class="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                              ${ICONS.pause}
+                              <span>Pause Timings & Intervals</span>
+                            </h5>
+                            ${pauseLogs.length === 0 ? `
+                              <p class="text-xs text-slate-400 italic">No pause intervals recorded for this period.</p>
+                            ` : `
+                              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                ${pauseLogs.map(l => {
+                                  const startStr = new Date(l.started_at).toLocaleTimeString();
+                                  const endStr = l.ended_at ? new Date(l.ended_at).toLocaleTimeString() : 'Running';
+                                  const diffSec = l.ended_at ? Math.max(0, Math.floor((new Date(l.ended_at).getTime() - new Date(l.started_at).getTime()) / 1000)) : 0;
+                                  return `
+                                    <div class="p-2 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 flex items-center justify-between">
+                                      <div>
+                                        <span class="font-mono font-bold text-amber-800 dark:text-amber-300">${startStr} → ${endStr}</span>
+                                        <span class="text-[10px] text-amber-600 block">Session Duration</span>
+                                      </div>
+                                      <span class="font-mono font-bold text-amber-700 dark:text-amber-400">${formatDuration(diffSec)}</span>
+                                    </div>
+                                  `;
+                                }).join('')}
+                              </div>
+                            `}
+                          </div>
+                        </div>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      function exportReportCSV() {
+        const isMonthly = reportMode === 'monthly';
+        const period = isMonthly ? reportMonth : reportDate;
+        let csv = "Member,Period,Completed Tasks,Work Time (Minutes),Empty Time (Minutes)\n";
+        profiles.forEach(m => {
+          const memberTasks = tasks.filter(t => {
+            if (String(t.assignee) !== String(m.id)) return false;
+            if (t.status !== 'completed') return false;
+            const d = t.completed_at || t.created_at;
+            return isMonthly ? d.startsWith(reportMonth) : d.startsWith(reportDate);
+          });
+          const logs = workLogs.filter(w => {
+            if (String(w.user_id) !== String(m.id)) return false;
+            return isMonthly ? (w.started_at || '').startsWith(reportMonth) : (w.started_at || '').startsWith(reportDate);
+          });
+          const workSec = logs.reduce((acc, log) => {
+            const s = new Date(log.started_at).getTime();
+            const e = log.ended_at ? new Date(log.ended_at).getTime() : Date.now();
+            return acc + Math.max(0, Math.floor((e - s) / 1000));
+          }, 0);
+          const emptySec = Math.max(0, 8 * 3600 - workSec);
+          csv += `"${m.name}","${period}",${memberTasks.length},${Math.round(workSec / 60)},${Math.round(emptySec / 60)}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `team_report_${period}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      // Payment Sheet Modal
+      function renderPaymentModal() {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const yesterdayObj = new Date();
+        yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+        const yesterdayStr = yesterdayObj.toISOString().slice(0, 10);
+
+        const filteredPayments = paymentSheet.filter(p => {
+          if (showAllPaymentDates) return true;
+          const pDate = p.created_at ? p.created_at.slice(0, 10) : '';
+          return pDate === selectedPaymentDate;
+        });
+
+        const totalAmount = filteredPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+
+        return `
+          <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[88vh]">
+              <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                    ${ICONS.receipt}
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-slate-900 dark:text-slate-100 text-lg">Payment Sheet</h3>
+                    <p class="text-xs text-slate-500">Date-wise compensation records · Edit or delete any entry</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button onclick="window.exportPaymentSheetCSV()" class="btn-action flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-200">
+                    ${ICONS.download}
+                    <span>Export CSV</span>
+                  </button>
+                  <button onclick="window.closePaymentSheet()" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg">
+                    ${ICONS.close}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Date-wise Filter Bar -->
+              <div class="my-3 p-3 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-xl flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                    ${ICONS.calendar}
+                    Date:
+                  </span>
+
+                  <button type="button" onclick="window.setPaymentDate('${todayStr}')" class="btn-action px-2.5 py-1 rounded-lg font-bold transition ${!showAllPaymentDates && selectedPaymentDate === todayStr ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}">
+                    Today
+                  </button>
+
+                  <button type="button" onclick="window.setPaymentDate('${yesterdayStr}')" class="btn-action px-2.5 py-1 rounded-lg font-bold transition ${!showAllPaymentDates && selectedPaymentDate === yesterdayStr ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}">
+                    Yesterday
+                  </button>
+
+                  <div class="flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <span class="text-[10px] text-slate-400">Date:</span>
+                    <input type="date" value="${selectedPaymentDate}" onchange="window.setPaymentDate(this.value)"
+                      class="bg-transparent text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none" />
+                  </div>
+
+                  <button type="button" onclick="window.toggleAllPaymentDates()" class="btn-action px-2.5 py-1 rounded-lg font-bold transition ${showAllPaymentDates ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}">
+                    ${showAllPaymentDates ? 'Showing All' : 'Show All Dates'}
+                  </button>
+                </div>
+
+                <span class="text-[11px] text-slate-500 dark:text-slate-400">
+                  ${showAllPaymentDates ? 'All Dates' : selectedPaymentDate} (${filteredPayments.length} records)
+                </span>
+              </div>
+
+              <!-- Quick Add Entry Form -->
+              <form onsubmit="window.handleNewPayment(event)" class="mb-3 flex flex-col sm:flex-row gap-2">
+                <input id="pay-task-name" type="text" placeholder="Task Name..." required
+                  class="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                <input id="pay-amount" type="number" step="0.01" min="0" placeholder="Amount (INR)..." required
+                  class="w-full sm:w-32 px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono" />
+                <input id="pay-notes" type="text" placeholder="Notes (optional)..."
+                  class="w-full sm:w-40 px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                <button type="submit" class="btn-action px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm">
+                  Add Entry
+                </button>
+              </form>
+
+              <!-- Table Content: Editable & Deletable -->
+              <div class="flex-1 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm my-2">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-slate-100 dark:bg-slate-800/80 text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">
+                    <tr>
+                      <th class="py-2 px-3">Task Name</th>
+                      <th class="py-2 px-3 w-28">Amount</th>
+                      <th class="py-2 px-3 w-32">Date</th>
+                      <th class="py-2 px-3 w-32">Notes</th>
+                      <th class="py-2 px-3 w-20 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-700 dark:text-slate-300">
+                    ${filteredPayments.length === 0 ? `
+                      <tr>
+                        <td colSpan="5" class="py-10 text-center text-slate-400 italic">
+                          No payments found for ${showAllPaymentDates ? 'all dates' : selectedPaymentDate}. Add an entry above.
+                        </td>
+                      </tr>
+                    ` : filteredPayments.map(p => `
+                      <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                        <td class="py-2.5 px-3">
+                          ${editingPaymentId === p.id ? `
+                            <input id="edit-pay-name-${p.id}" type="text" value="${(p.task_name || '').replace(/"/g, '&quot;')}" class="w-full px-2 py-1 bg-white dark:bg-slate-800 border rounded text-xs" />
+                          ` : `
+                            <span class="font-semibold text-slate-900 dark:text-white">${p.task_name}</span>
+                          `}
+                        </td>
+                        <td class="py-2.5 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          ${editingPaymentId === p.id ? `
+                            <input id="edit-pay-amt-${p.id}" type="number" step="0.01" value="${p.amount}" class="w-20 px-2 py-1 bg-white dark:bg-slate-800 border rounded text-xs font-mono" />
+                          ` : `
+                            ₹${Number(p.amount).toLocaleString('en-IN')}
+                          `}
+                        </td>
+                        <td class="py-2.5 px-3 text-slate-400 text-[11px] font-mono">
+                          ${p.created_at ? new Date(p.created_at).toLocaleDateString() : ''}
+                        </td>
+                        <td class="py-2.5 px-3 text-slate-400 text-[11px] truncate max-w-xs">
+                          ${editingPaymentId === p.id ? `
+                            <input id="edit-pay-notes-${p.id}" type="text" value="${(p.notes || '').replace(/"/g, '&quot;')}" class="w-full px-2 py-1 bg-white dark:bg-slate-800 border rounded text-xs" />
+                          ` : (p.notes || '—')}
+                        </td>
+                        <td class="py-2.5 px-3 text-right">
+                          <div class="flex items-center justify-end gap-1">
+                            ${editingPaymentId === p.id ? `
+                              <button onclick="window.saveEditPayment('${p.id}')" title="Save" class="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
+                                ${ICONS.check}
+                              </button>
+                              <button onclick="window.cancelEditPayment()" title="Cancel" class="p-1 text-slate-400 hover:bg-slate-100 rounded">
+                                ${ICONS.close}
+                              </button>
+                            ` : `
+                              <button onclick="window.startEditPayment('${p.id}')" title="Edit entry" class="p-1 text-slate-400 hover:text-indigo-600 rounded">
+                                ${ICONS.edit}
+                              </button>
+                            `}
+                            <button onclick="window.deletePayment('${p.id}')" title="Delete entry" class="p-1 text-slate-400 hover:text-rose-600 rounded">
+                              ${ICONS.trash}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Footer with Compensation Sum -->
+              <div class="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <span class="text-xs text-slate-500">Filtered Compensation:</span>
+                  <span class="ml-2 font-mono font-extrabold text-base text-emerald-600 dark:text-emerald-400">₹${totalAmount.toLocaleString('en-IN')}</span>
+                </div>
+                <span class="text-xs text-slate-400">${filteredPayments.length} total entries</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Task Detail & Follow-up Scheduling Modal
+      function renderTaskDetailModal(taskId) {
+        const task = tasks.find(t => String(t.id) === String(taskId));
+        if (!task) return '';
+        const taskComments = comments.filter(c => String(c.task_id) === String(taskId));
+        const durationSec = getTaskDuration(task.id);
+        const assigneeObj = profiles.find(p => String(p.id) === String(task.assignee));
+
+        const isRunning = task.status === 'running';
+        const isFollowup = task.status === 'followup';
+
+        return `
+          <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[88vh]">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">${task.work_type || 'OTHER'}</span>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full font-bold ${task.priority === 'urgent' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}">${task.priority}</span>
+                  <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full ${isFollowup ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300' : 'text-slate-400'}">
+                    Status: ${task.status}
+                  </span>
+                </div>
+                <button onclick="window.closeTaskDetail()" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                  ${ICONS.close}
+                </button>
+              </div>
+
+              <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mt-3 mb-1">${task.title}</h3>
+              <p class="text-xs text-slate-500 mb-2">${task.descr || 'No additional description provided.'}</p>
+
+              <div class="py-2 border-y border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400 mb-2">
+                <div>Assignee: <b class="text-slate-800 dark:text-slate-200">${assigneeObj ? assigneeObj.name : 'Unassigned'}</b></div>
+                <div>Elapsed Work: <b class="font-mono text-indigo-600 dark:text-indigo-400">${formatDuration(durationSec)}</b></div>
+              </div>
+
+              <!-- Follow-up Scheduling Card -->
+              <div class="p-3.5 mb-2 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/80 space-y-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span class="text-xs font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider">
+                      Follow-up Sheet Schedule
+                    </span>
+                  </div>
+                  ${task.followup_at ? `
+                    <button onclick="window.clearFollowup('${task.id}')" class="text-[10px] text-amber-700 dark:text-amber-400 hover:text-rose-600 underline">
+                      Clear time
+                    </button>
+                  ` : ''}
+                </div>
+
+                <div class="text-[11px] text-amber-800 dark:text-amber-300 font-medium">
+                  ${task.followup_at
+                    ? `Scheduled resume: <b class="font-mono font-bold">${new Date(task.followup_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })}</b>`
+                    : 'Paused work · Set when admin or member should take this follow-up again:'}
+                </div>
+
+                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                  <button onclick="window.quickFollowupPreset('${task.id}', 30)" class="btn-action px-2 py-1 text-[11px] font-bold rounded-lg bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 hover:bg-amber-100">
+                    +30m
+                  </button>
+                  <button onclick="window.quickFollowupPreset('${task.id}', 60)" class="btn-action px-2 py-1 text-[11px] font-bold rounded-lg bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 hover:bg-amber-100">
+                    +1 hr
+                  </button>
+                  <button onclick="window.quickFollowupPreset('${task.id}', 120)" class="btn-action px-2 py-1 text-[11px] font-bold rounded-lg bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 hover:bg-amber-100">
+                    +2 hrs
+                  </button>
+                  <button onclick="window.tomorrowFollowupPreset('${task.id}')" class="btn-action px-2 py-1 text-[11px] font-bold rounded-lg bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 hover:bg-amber-100">
+                    Tomorrow 10 AM
+                  </button>
+                </div>
+
+                <form onsubmit="window.handleCustomFollowup(event, '${task.id}')" class="flex items-center gap-2 pt-1">
+                  <input id="custom-followup-input-${task.id}" type="datetime-local" class="px-2 py-1 text-xs font-mono rounded-lg bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-slate-900 dark:text-white" />
+                  <button type="submit" class="btn-action px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg">
+                    Save Schedule
+                  </button>
+                </form>
+              </div>
+
+              <!-- Activity Notes -->
+              <div class="flex-1 overflow-y-auto my-1 space-y-2">
+                <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300">Activity Notes & Comments</h4>
+                ${taskComments.length === 0 ? `
+                  <p class="text-xs text-slate-400 italic">No notes posted yet.</p>
+                ` : taskComments.map(c => `
+                  <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-xs">
+                    <div class="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      <span>${c.author || 'Team Member'}</span>
+                      <span class="text-[10px] text-slate-400">${new Date(c.created_at).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="text-slate-600 dark:text-slate-300">${c.body}</div>
+                  </div>
+                `).join('')}
+              </div>
+
+              <form onsubmit="window.handleAddComment(event, '${task.id}')" class="my-2 flex gap-2">
+                <input id="comment-input" type="text" placeholder="Add a quick note / comment..." required
+                  class="flex-1 px-3 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none" />
+                <button type="submit" class="btn-action px-3 py-2 bg-indigo-600 text-white font-bold text-xs rounded-lg">
+                  Post
+                </button>
+              </form>
+
+              <!-- Footer Buttons -->
+              <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+                <button onclick="window.deleteTask('${task.id}'); window.closeTaskDetail();" class="text-xs text-rose-600 hover:underline">
+                  Delete
+                </button>
+
+                <div class="flex items-center gap-2">
+                  ${isRunning ? `
+                    <button onclick="window.pauseTask('${task.id}'); window.closeTaskDetail();" class="btn-action px-3 py-1.5 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 text-xs font-bold flex items-center gap-1">
+                      ${ICONS.pause}
+                      <span>Pause (Move to Follow-up)</span>
+                    </button>
+                    <button onclick="window.completeTask('${task.id}'); window.closeTaskDetail();" class="btn-action px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm">
+                      ${ICONS.check}
+                      <span>Mark Done</span>
+                    </button>
+                  ` : `
+                    <button onclick="window.startTask('${task.id}'); window.closeTaskDetail();" class="btn-action px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm">
+                      ${ICONS.play}
+                      <span>${isFollowup ? 'Resume / Take Follow-up' : 'Start Work'}</span>
+                    </button>
+                    ${!isFollowup ? `
+                      <button onclick="window.pauseTask('${task.id}'); window.closeTaskDetail();" class="btn-action px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-xs font-bold border border-amber-200 dark:border-amber-800">
+                        Move to Follow-up
+                      </button>
+                    ` : ''}
+                  `}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Window Global Bindings
+      window.selectLoginUser = function(userId) {
+        selectedLoginUserId = userId;
+        loginError = '';
+        renderApp();
+      };
+
+      window.handleLoginSubmit = function(e) {
+        e.preventDefault();
+        const pwdInput = document.getElementById('login-password-input');
+        const userSelect = document.getElementById('login-user-select');
+        const userId = userSelect ? userSelect.value : selectedLoginUserId;
+        const password = pwdInput ? pwdInput.value : '';
+        loginUser(userId, password);
+      };
+
+      window.logoutUser = logoutUser;
+      window.setTab = function(tab) { currentFilter = tab; selectedMemberId = null; renderApp(); };
+      window.setWorkTypeFilter = function(wt) { currentWorkTypeFilter = wt; renderApp(); };
+      window.setThemeMode = setThemeMode;
+
+      window.openPaymentSheet = function() { showPaymentModal = true; renderApp(); };
+      window.closePaymentSheet = function() { showPaymentModal = false; renderApp(); };
+      window.openMembersRosterModal = function() { showMembersRosterModal = true; renderApp(); };
+      window.closeMembersRosterModal = function() { showMembersRosterModal = false; renderApp(); };
+      window.openReportsModal = function() { showReportsModal = true; renderApp(); };
+      window.closeReportsModal = function() { showReportsModal = false; renderApp(); };
+      window.setReportDate = function(dateStr) { reportDate = dateStr; renderApp(); };
+      window.setReportMonth = function(monthStr) { reportMonth = monthStr; renderApp(); };
+      window.setReportMode = function(mode) { reportMode = mode; renderApp(); };
+      window.toggleReportMember = function(memberId) {
+        expandedReportMemberId = expandedReportMemberId === memberId ? null : memberId;
+        renderApp();
+      };
+      window.exportReportCSV = exportReportCSV;
+      window.openMemberTasks = function(memberId) { drilldownMemberId = memberId; renderApp(); };
+      window.closeMemberTasks = function() { drilldownMemberId = null; renderApp(); };
+      window.openTaskDetail = function(taskId) { inspectingTaskId = taskId; renderApp(); };
+      window.closeTaskDetail = function() { inspectingTaskId = null; renderApp(); };
+      window.clearSelected = function() { selectedTaskIds.clear(); renderApp(); };
+
+      // Payment operations
+      window.setPaymentDate = function(dateStr) { selectedPaymentDate = dateStr; showAllPaymentDates = false; renderApp(); };
+      window.toggleAllPaymentDates = function() { showAllPaymentDates = !showAllPaymentDates; renderApp(); };
+      window.startEditPayment = function(id) { editingPaymentId = id; renderApp(); };
+      window.cancelEditPayment = function() { editingPaymentId = null; renderApp(); };
+      window.saveEditPayment = function(id) {
+        const nameEl = document.getElementById(`edit-pay-name-${id}`);
+        const amtEl = document.getElementById(`edit-pay-amt-${id}`);
+        const notesEl = document.getElementById(`edit-pay-notes-${id}`);
+        const name = nameEl ? nameEl.value.trim() : '';
+        const amt = amtEl ? amtEl.value : 0;
+        const notes = notesEl ? notesEl.value.trim() : '';
+        if (name && amt) updatePayment(id, name, amt, notes);
+      };
+      window.deletePayment = deletePayment;
+
+      window.toggleSelectTask = function(id, checked) {
+        if (checked) selectedTaskIds.add(String(id));
+        else selectedTaskIds.delete(String(id));
+        renderApp();
+      };
+
+      window.toggleSelectAll = function(checked) {
+        if (checked) {
+          tasks.forEach(t => selectedTaskIds.add(String(t.id)));
+        } else {
+          selectedTaskIds.clear();
+        }
+        renderApp();
+      };
+
+      window.startTask = startTask;
+      window.pauseTask = pauseTask;
+      window.scheduleFollowup = scheduleFollowup;
+      window.quickFollowupPreset = function(taskId, minutes) {
+        const d = new Date(Date.now() + minutes * 60 * 1000);
+        scheduleFollowup(taskId, d.toISOString());
+      };
+      window.tomorrowFollowupPreset = function(taskId) {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        d.setHours(10, 0, 0, 0);
+        scheduleFollowup(taskId, d.toISOString());
+      };
+      window.clearFollowup = function(taskId) {
+        scheduleFollowup(taskId, null);
+      };
+      window.handleCustomFollowup = function(e, taskId) {
+        e.preventDefault();
+        const input = document.getElementById(`custom-followup-input-${taskId}`);
+        if (input && input.value) {
+          scheduleFollowup(taskId, new Date(input.value).toISOString());
+        }
+      };
+      window.completeTask = completeTask;
+      window.deleteTask = deleteTask;
+      window.bulkAssign = bulkAssign;
+      window.bulkChangeStatus = bulkChangeStatus;
+      window.bulkDelete = bulkDelete;
+      window.exportPaymentSheetCSV = exportPaymentSheetCSV;
+
+      window.handleFastDispatch = function(e) {
+        e.preventDefault();
+        const title = document.getElementById('dispatch-title').value;
+        const assignee = document.getElementById('dispatch-assignee').value;
+        const worktype = document.getElementById('dispatch-worktype').value;
+        const budget = document.getElementById('dispatch-budget').value;
+        const priority = document.getElementById('dispatch-priority').value;
+        createTask(title, assignee, priority, worktype, budget);
+        document.getElementById('fast-dispatch-form').reset();
+      };
+
+      window.handleNewPayment = function(e) {
+        e.preventDefault();
+        const name = document.getElementById('pay-task-name').value;
+        const amt = document.getElementById('pay-amount').value;
+        const notes = document.getElementById('pay-notes') ? document.getElementById('pay-notes').value : '';
+        recordPayment(name, amt, notes);
+        document.getElementById('pay-task-name').value = '';
+        document.getElementById('pay-amount').value = '';
+        if (document.getElementById('pay-notes')) document.getElementById('pay-notes').value = '';
+      };
+
+      window.handleAddComment = function(e, taskId) {
+        e.preventDefault();
+        const input = document.getElementById('comment-input');
+        const body = input.value;
+        if (!body) return;
+        const newComment = {
+          id: `com_${Date.now()}`,
+          task_id: String(taskId),
+          author: currentUser.name || 'Member',
+          body,
+          created_at: new Date().toISOString()
+        };
+        comments.push(newComment);
+        if (sb) sb.from('comments').insert(newComment);
+        input.value = '';
+        renderApp();
+      };
+
+      // 0ms Instant Render & Background Sync
+      renderApp();
+      backgroundSyncData();
+    })();
+  </script>
+</body>
+</html>
